@@ -1,0 +1,6 @@
+[submodule "vendors/paho.mqtt.cpp"]
+	path = vendors/paho.mqtt.cpp
+	url = https://github.com/eclipse/paho.mqtt.cpp
+[submodule "vendors/paho.mqtt.c"]
+	path = vendors/paho.mqtt.c
+	url = https://github.com/eclipse/paho.mqtt.c
