@@ -4,11 +4,9 @@ project(sms)
 
 add_executable(sms src/main.cpp)
 
-set_target_properties(sms PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-
 target_link_libraries(sms
-	../../../../libs/paho-mqtt-cpp/lib/paho-mqttpp3-static
 	../../../../libs/paho-mqtt-c/lib/paho-mqtt3a-static
+	../../../../libs/paho-mqtt-cpp/lib/paho-mqttpp3-static
 )
 
 if (WIN32)
