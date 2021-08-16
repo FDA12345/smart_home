@@ -1,22 +1,18 @@
-SET INSTALL_PATH=d:/fda/smart_home
+rem SET ROOT_PATH=d:/fda/smart_home
 SET BUILD_TYPE=Release
 
-cd %INSTALL_PATH%/vendors/paho.mqtt.c
-cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=%INSTALL_PATH%/libs/paho-mqtt-c -DPAHO_BUILD_STATIC=TRUE
-cmake --build build/ --target install --config %BUILD_TYPE%
-cd %INSTALL_PATH%
 
-cd %INSTALL_PATH%/vendors/paho.mqtt.c
-cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=%INSTALL_PATH%/libs/paho-mqtt-c
-cmake --build build/ --target install --config %BUILD_TYPE%
-cd %INSTALL_PATH%
+SET LIB_MQTT_C=paho.mqtt.c
+SET LIB_MQTT_CPP=paho.mqtt.cpp
 
-cd %INSTALL_PATH%/vendors/paho.mqtt.cpp
-cmake -Bbuild -H. -DPAHO_BUILD_STATIC=TRUE -DCMAKE_INSTALL_PREFIX=%INSTALL_PATH%/libs/paho-mqtt-cpp -DPAHO_BUILD_SAMPLES=OFF -DPAHO_WITH_SSL=OFF -DCMAKE_PREFIX_PATH=%INSTALL_PATH%/libs/paho-mqtt-c
-cmake --build build/ --target install --config %BUILD_TYPE%
-cd %INSTALL_PATH%
 
-cd %INSTALL_PATH%/vendors/paho.mqtt.cpp
-cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=%INSTALL_PATH%/libs/paho-mqtt-cpp -DPAHO_BUILD_SAMPLES=OFF -DPAHO_WITH_SSL=OFF -DCMAKE_PREFIX_PATH=%INSTALL_PATH%/libs/paho-mqtt-c
-cmake --build build/ --target install --config %BUILD_TYPE%
-cd %INSTALL_PATH%
+cd vendors/%LIB_MQTT_C%
+cmake -B../../build.%LIB_MQTT_C%.static -H. -DCMAKE_INSTALL_PREFIX=../../libs/%LIB_MQTT_C%.static -DPAHO_BUILD_STATIC=TRUE
+cmake --build ../../build.%LIB_MQTT_C%.static --target install --config %BUILD_TYPE%
+cd ../..
+
+
+cd vendors/%LIB_MQTT_CPP%
+cmake -B../../build.%LIB_MQTT_CPP%.static -H. -DCMAKE_INSTALL_PREFIX=../../libs/%LIB_MQTT_CPP%.static -DPAHO_MQTT_C_LIBRARIES=../../libs/%LIB_MQTT_C%.static/lib/paho-mqtt3a -DPAHO_MQTT_C_INCLUDE_DIRS=../../libs/%LIB_MQTT_C%.static/include -DPAHO_BUILD_STATIC=TRUE
+cmake --build ../../build.%LIB_MQTT_CPP%.static --target install --config %BUILD_TYPE%
+cd ../..
