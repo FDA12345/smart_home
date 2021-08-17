@@ -15,7 +15,7 @@ int main()
 		std::cout << "start broker failed" << std::endl;
 	}
 
-	std::this_thread::sleep_for(std::chrono::seconds(15));
+	std::this_thread::sleep_for(std::chrono::seconds(1000));
 
 	broker->Stop();
 	broker.reset();

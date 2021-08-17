@@ -1,6 +1,7 @@
 #include "MqttBroker.h"
 #include "MQTTClient.h"
 
+#include <set>
 class MqttBrokerImpl : public Broker
 {
 public:
@@ -10,7 +11,8 @@ public:
 
 		while (true)
 		{
-			if (MQTTClient_create(&m_client, "tcp://192.168.41.11:1883", "ExampleClientPub",
+			//if (MQTTClient_create(&m_client, "tcp://192.168.41.11:1883", "ExampleClientPub",
+			if (MQTTClient_create(&m_client, "tcp://mqtt.eclipseprojects.io:1883", "fda123456789",
 				MQTTCLIENT_PERSISTENCE_NONE, NULL) != MQTTCLIENT_SUCCESS)
 			{
 				break;
@@ -74,6 +76,8 @@ private:
 
 			std::cout << "connected" << std::endl;
 
+			int ret = MQTTClient_subscribe(m_client, "#", 0);
+
 			while (!m_stopped && m_connected)
 			{
 				std::unique_lock<std::mutex> lock(m_stopMx);
@@ -81,8 +85,9 @@ private:
 				{
 					continue;
 				}
+
 				m_stopCv.wait_for(lock, std::chrono::seconds(1), [this]() {return m_stopped; });
-				continue;
+				std::cout << "m_messages count = " << m_messages.size() << std::endl;
 			}
 
 			if (!m_connected)
@@ -130,8 +135,10 @@ private:
 
 		return result;
 	}
+	std::set<std::string> m_messages;
 	int OnMessageArrived(const char* topicName, int topicLen, const MQTTClient_message* message)
 	{
+		m_messages.insert(topicName);
 		return 1;
 	}
 
@@ -149,7 +156,7 @@ private:
 		CONNECT_TIMEOUT = 5,
 		DISCONNECT_TIMEOUT = 3,
 		RECONNECT_INTERVAL = 10,
-		KEEP_ALIVE_INTERVAL = 20,
+		KEEP_ALIVE_INTERVAL = 5,
 	};
 
 	class MQTTClientDestroyer

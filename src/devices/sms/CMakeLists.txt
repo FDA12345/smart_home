@@ -2,10 +2,17 @@ cmake_minimum_required(VERSION 3.10)
 
 add_executable(sms src/main.cpp)
 
-target_link_libraries(sms	
-	PRIVATE paho-mqtt3a-static
-	PRIVATE paho-mqtt3c-static
-)
+if (PAHO_BUILD_STATIC)
+	target_link_libraries(sms	
+		PRIVATE paho-mqtt3a-static
+		PRIVATE paho-mqtt3c-static
+	)
+else()
+	target_link_libraries(sms	
+		PRIVATE paho-mqtt3a
+		PRIVATE paho-mqtt3c
+	)
+endif()
 
 target_precompile_headers(sms PRIVATE src/stdafx.h)
 
