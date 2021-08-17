@@ -1,12 +1,9 @@
 #include <iostream>
 
-//#include <mqtt/async_client.h>
+#include "MqttBroker.h"
 
 int main()
 {
-  //mqtt::async_client client("tcp://192.168.41.11:1883", "");
-  //auto token = client.connect();
-  //token->wait_for(std::chrono::seconds(5));
-
+	auto broker = MqttBroker::Create();
   std::cout << "hello world " << std::endl;
 }
