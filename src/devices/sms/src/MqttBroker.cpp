@@ -4,8 +4,53 @@
 #include <set>
 #include <unordered_set>
 
-uint64_t m_topicNameCount = 0;
-uint64_t m_messageCount = 0;
+
+class Msg
+{
+public:
+	Msg(Msg&& right)
+		: m_topicName(right.m_topicName)
+		, m_topicLen(right.m_topicLen)
+		, m_message(right.m_message)
+		, m_topic(m_topicName)
+	{
+		right.m_topicName = nullptr;
+		right.m_message = nullptr;
+	}
+
+	Msg(char* topicName, int topicLen, MQTTClient_message* message)
+		: m_topicName(topicName)
+		, m_topicLen(topicLen)
+		, m_message(message)
+		, m_topic(topicName)
+	{
+	}
+
+	~Msg()
+	{
+		if (m_topicName != nullptr)
+		{
+			MQTTClient_free(m_topicName);
+		}
+
+		if (m_message != nullptr)
+		{
+			MQTTClient_freeMessage(&m_message);
+		}
+	}
+
+	bool operator< (const Msg& right) const
+	{
+		return strcmp(m_topicName, right.m_topicName) < 0;
+	}
+
+private:
+	char* m_topicName;
+	int m_topicLen;
+	MQTTClient_message* m_message;
+	std::string_view m_topic;
+};
+
 
 class MqttBrokerImpl : public Broker
 {
@@ -94,7 +139,7 @@ private:
 				}
 
 				m_stopCv.wait_for(lock, std::chrono::seconds(1), [this]() {return m_stopped; });
-				std::cout << "m_messages count = " << m_topicNames.size() << ", m_topicNameCount = " << m_topicNameCount << ", m_messageCount = " << m_messageCount <<  std::endl;
+				std::cout << "m_messages count = " << m_topicNames.size() << std::endl;
 			}
 
 			if (!m_connected)
@@ -132,80 +177,18 @@ private:
 
 	static int __onMessageArrived(void* context, char* topicName, int topicLen, MQTTClient_message* message)
 	{
-		++m_topicNameCount;
-		++m_messageCount;
-
-		auto result = static_cast<MqttBrokerImpl*>(context)->OnMessageArrived(topicName, topicLen, message);
-
-		if (result == 1)
-		{
-			//MQTTClient_free(topicName);
-			//MQTTClient_freeMessage(&message);
-		}
-
-		return result;
+		static_cast<MqttBrokerImpl*>(context)->OnMessageArrived({ topicName, topicLen, message });
+		return 1;
 	}
 
-	class Msg
-	{
-	public:
-		Msg(Msg&& right)
-			: m_topicName(right.m_topicName)
-			, m_topicLen(right.m_topicLen)
-			, m_message(right.m_message)
-			, m_topic(m_topicName)
-		{
-			right.m_topicName = nullptr;
-			right.m_message = nullptr;
-		}
-
-		Msg(char* topicName, int topicLen, MQTTClient_message* message)
-			: m_topicName(topicName)
-			, m_topicLen(topicLen)
-			, m_message(message)
-			, m_topic(topicName)
-		{
-		}
-
-		~Msg()
-		{
-			if (m_topicName != nullptr)
-			{
-				MQTTClient_free(m_topicName);
-				--m_topicNameCount;
-			}
-
-			if (m_message != nullptr)
-			{
-				MQTTClient_freeMessage(&m_message);
-				--m_messageCount;
-			}
-		}
-
-		bool operator< (const Msg& right) const
-		{
-			return strcmp(m_topicName, right.m_topicName) < 0;
-		}
-
-	private:
-		char* m_topicName;
-		int m_topicLen;
-		MQTTClient_message* m_message;
-		std::string_view m_topic;
-	};
 	std::set<Msg> m_topicNames;
-
-	int OnMessageArrived(char* topicName, int topicLen, MQTTClient_message* message)
+	void OnMessageArrived(Msg&& msg)
 	{
-		Msg msg(topicName, topicLen, message);
-
 		auto it = m_topicNames.find(msg);
 		if (it == m_topicNames.end())
 		{
 			m_topicNames.emplace(std::move(msg));
 		}
-
-		return 1;
 	}
 
 	static void __onDeliveryComplete(void* context, MQTTClient_deliveryToken dt)
