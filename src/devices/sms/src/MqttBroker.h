@@ -2,8 +2,8 @@
 
 #include "Broker.h"
 
-class MqttBroker : private Broker
+class MqttBroker
 {
 public:
-	static Ptr Create();
+	static Broker::Ptr Create();
 };

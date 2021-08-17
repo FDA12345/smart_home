@@ -5,5 +5,18 @@
 int main()
 {
 	auto broker = MqttBroker::Create();
-  std::cout << "hello world " << std::endl;
+
+	if (broker->Start())
+	{
+		std::cout << "broker started" << std::endl;
+	}
+	else
+	{
+		std::cout << "start broker failed" << std::endl;
+	}
+
+	std::this_thread::sleep_for(std::chrono::seconds(15));
+
+	broker->Stop();
+	broker.reset();
 }
