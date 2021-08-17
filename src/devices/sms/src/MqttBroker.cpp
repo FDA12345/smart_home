@@ -2,6 +2,8 @@
 #include "MQTTClient.h"
 
 #include <set>
+#include <unordered_set>
+
 class MqttBrokerImpl : public Broker
 {
 public:
@@ -87,7 +89,7 @@ private:
 				}
 
 				m_stopCv.wait_for(lock, std::chrono::seconds(1), [this]() {return m_stopped; });
-				std::cout << "m_messages count = " << m_messages.size() << std::endl;
+				std::cout << "m_messages count = " << m_topicNames.size() << std::endl;
 			}
 
 			if (!m_connected)
@@ -135,10 +137,10 @@ private:
 
 		return result;
 	}
-	std::set<std::string> m_messages;
+	std::unordered_set<std::string> m_topicNames;
 	int OnMessageArrived(const char* topicName, int topicLen, const MQTTClient_message* message)
 	{
-		m_messages.insert(topicName);
+		m_topicNames.insert(topicName);
 		return 1;
 	}
 
