@@ -1,2 +1,2 @@
-cmake -B build
+cmake -Bbuild
 cmake --build build

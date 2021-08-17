@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
+project(SmartHome)
 
-project(smart_home)
+set(PAHO_BUILD_STATIC TRUE)
+add_subdirectory(vendors/paho.mqtt.c)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-#set(CMAKE_DEBUG_POSTFIX d)
-
-add_subdirectory(src)
+set(PAHO_MQTT_C_LIBRARIES)
+set(PAHO_MQTT_C_INCLUDE_DIRS)
+add_subdirectory(vendors/paho.mqtt.cpp)
