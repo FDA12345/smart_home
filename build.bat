@@ -1,2 +1,2 @@
-cmake -B build
-cmake --build build
+cmake -B build 
+rem cmake --build build
