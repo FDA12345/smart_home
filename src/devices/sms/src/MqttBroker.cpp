@@ -141,7 +141,7 @@ public:
 		{
 			it = m_subs.emplace(topicName, 0).first;
 
-			if (m_connected)
+			if (m_connected && !m_justConnected)
 			{
 				MQTTClient_subscribe(m_client, topicName.c_str(), 0);
 			}
@@ -171,11 +171,18 @@ private:
 		while (!m_stopped)
 		{
 			bool connected = false;
+
 			{
-				std::lock_guard<std::mutex> lock(m_mx);
+				std::unique_lock<std::mutex> lock(m_mx);
 
 				m_connected = Connect();
+				m_justConnected = m_connected;
 				connected = m_connected;
+
+				if (m_connected)
+				{
+					FireConnected();
+				}
 			}
 
 			if (!connected)
@@ -188,8 +195,6 @@ private:
 				m_stopCv.wait_for(lock, std::chrono::seconds(RECONNECT_INTERVAL), [this]() {return m_stopped; });
 				continue;
 			}
-
-			OnConnected();
 
 			while (!m_stopped && m_connected)
 			{
@@ -204,7 +209,7 @@ private:
 
 			if (!m_connected)
 			{
-				OnDisconnected();
+				FireDisconnected();
 			}
 		}
 
@@ -224,7 +229,7 @@ private:
 		return MQTTClient_connect(m_client, &opts) == MQTTCLIENT_SUCCESS;
 	}
 
-	void OnConnected()
+	void FireConnected()
 	{
 		std::vector<BrokerEvents*> owners;
 		std::vector<std::string> sub;
@@ -253,7 +258,7 @@ private:
 		//PerformSubscribe();
 	}
 
-	void OnDisconnected()
+	void FireDisconnected()
 	{
 		std::vector<BrokerEvents*> owners;
 
@@ -317,6 +322,16 @@ private:
 	const std::string m_address;
 	const std::string m_clientId;
 
+	enum State
+	{
+		STATE_CONNECT,
+		STATE_FIRE_CONNECTED,
+		STATE_READY,
+		STATE_DISCONNECTED,
+		STATE_STOPPED
+	};
+	State m_state = STATE_CONNECT;
+
 	enum
 	{
 		CONNECT_TIMEOUT = 5,
@@ -345,6 +360,7 @@ private:
 
 	std::condition_variable m_connectCv;
 	bool m_connected = false;
+	bool m_justConnected = false;
 
 	std::vector<BrokerEvents*> m_owners;
 	std::map<std::string, size_t> m_subs;
