@@ -3,7 +3,7 @@
 #include "MqttBroker.h"
 
 
-class OnTopicEvents : public broker::TopicEvents
+class OnBrokerEvents : public broker::BrokerEvents
 {
 public:
 	void OnMsgRecv(const broker::TopicMsg& topicMsg) override
@@ -18,11 +18,11 @@ public:
 
 int main()
 {
-	OnTopicEvents onTopicEvents;
+	OnBrokerEvents brokerEvents;
 
 	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
 
-	broker->SubscribeEvents(onTopicEvents);
+	broker->SubscribeEvents(brokerEvents);
 	broker->SubscribeTopic("$SYS/#");
 
 	if (broker->Start())

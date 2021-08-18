@@ -13,10 +13,10 @@ public:
 };
 
 
-class TopicEvents
+class BrokerEvents
 {
 public:
-	virtual ~TopicEvents() = default;
+	virtual ~BrokerEvents() = default;
 
 	virtual void OnMsgRecv(const TopicMsg& topicMsg) = 0;
 	virtual void OnMsgSent(const TopicMsg& topicMsg) = 0;
@@ -34,8 +34,8 @@ public:
 	virtual bool Start() = 0;
 	virtual void Stop() = 0;
 
-	virtual void SubscribeEvents(TopicEvents& topicEvents) = 0;
-	virtual void UnsubscribeEvents(TopicEvents& topicEvents) = 0;
+	virtual void SubscribeEvents(BrokerEvents& brokerEvents) = 0;
+	virtual void UnsubscribeEvents(BrokerEvents& brokerEvents) = 0;
 
 	virtual void SubscribeTopic(const std::string& topicName) = 0;
 	virtual void UnsubscribeTopic(const std::string& topicName) = 0;
