@@ -6,12 +6,22 @@
 class OnBrokerEvents : public broker::BrokerEvents
 {
 public:
-	void OnMsgRecv(const broker::TopicMsg& topicMsg) override
+	void OnConnected(broker::Broker& broker) override
+	{
+		std::cout << "connected" << std::endl;
+	}
+
+	void OnDisconnected(broker::Broker& broker) override
+	{
+		std::cout << "disconnected" << std::endl;
+	}
+
+	void OnMsgRecv(broker::Broker& broker, const broker::TopicMsg& topicMsg) override
 	{
 		std::cout << "msg " << std::string(topicMsg.Topic()) << std::endl;
 	}
 
-	void OnMsgSent(const broker::TopicMsg& topicMsg) override
+	void OnMsgSent(broker::Broker& broker, const broker::TopicMsg& topicMsg) override
 	{
 	}
 };

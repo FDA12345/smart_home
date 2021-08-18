@@ -191,9 +191,6 @@ private:
 
 			OnConnected();
 
-			//MQTTClient_subscribe(m_client, "$SYS/#", 0);
-			//MQTTClient_subscribe(m_client, "#", 0);
-
 			while (!m_stopped && m_connected)
 			{
 				std::unique_lock<std::mutex> lock(m_mx);
@@ -203,7 +200,6 @@ private:
 				}
 
 				m_stopCv.wait_for(lock, std::chrono::seconds(1), [this]() {return m_stopped; });
-				//std::cout << "m_messages count = " << m_topicNames.size() << std::endl;
 			}
 
 			if (!m_connected)
@@ -230,19 +226,49 @@ private:
 
 	void OnConnected()
 	{
-		std::cout << "connected" << std::endl;
+		std::vector<BrokerEvents*> owners;
+		std::vector<std::string> sub;
 
-		std::lock_guard lock(m_mx);
-
-		for (const auto& subs : m_subs)
 		{
-			MQTTClient_subscribe(m_client, subs.first.c_str(), 0);
+			std::lock_guard lock(m_mx);
+
+			for (auto& owner : m_owners)
+			{
+				owners.push_back(owner);
+			}
+
+			for (const auto& subs : m_subs)
+			{
+				sub.push_back(subs.first);
+			}
 		}
+
+		//MQTTClient_subscribe(m_client, subs.first.c_str(), 0);
+
+		for (const auto& owner : owners)
+		{
+			owner->OnConnected(*this);
+		}
+
+		//PerformSubscribe();
 	}
 
 	void OnDisconnected()
 	{
-		std::cout << "disconnected" << std::endl;
+		std::vector<BrokerEvents*> owners;
+
+		{
+			std::lock_guard lock(m_mx);
+			for (auto& owner : m_owners)
+			{
+				owners.push_back(owner);
+			}
+		}
+
+		for (const auto& owner : owners)
+		{
+			owner->OnDisconnected(*this);
+		}
 	}
 
 	static void __onConnLost(void* context, char* cause)
@@ -275,7 +301,7 @@ private:
 
 		for (const auto& owner : owners)
 		{
-			owner->OnMsgRecv(msg);
+			owner->OnMsgRecv(*this, msg);
 		}
 	}
 

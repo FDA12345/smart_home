@@ -13,13 +13,17 @@ public:
 };
 
 
+class Broker;
 class BrokerEvents
 {
 public:
 	virtual ~BrokerEvents() = default;
 
-	virtual void OnMsgRecv(const TopicMsg& topicMsg) = 0;
-	virtual void OnMsgSent(const TopicMsg& topicMsg) = 0;
+	virtual void OnConnected(Broker& broker) = 0;
+	virtual void OnDisconnected(Broker& broker) = 0;
+
+	virtual void OnMsgRecv(Broker& broker, const TopicMsg& topicMsg) = 0;
+	virtual void OnMsgSent(Broker& broker, const TopicMsg& topicMsg) = 0;
 };
 
 
