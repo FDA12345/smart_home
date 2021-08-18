@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 #set(CMAKE_DEBUG_POSTFIX d)
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
 
-add_compile_options(-MT)# -Zi)
-#add_link_options(-DEBUG)
+add_compile_options(-MT -Zi)
+add_link_options(-DEBUG)
 
 
 add_library(paho-mqtt3c-static UNKNOWN IMPORTED)
