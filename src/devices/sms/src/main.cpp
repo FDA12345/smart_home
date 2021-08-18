@@ -33,7 +33,8 @@ int main()
 	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
 
 	broker->SubscribeEvents(brokerEvents);
-	broker->SubscribeTopic("$SYS/#");
+	//broker->SubscribeTopic("$SYS/#");
+	broker->SubscribeTopic("#");
 
 	if (broker->Start())
 	{

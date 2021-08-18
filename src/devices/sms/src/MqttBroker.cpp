@@ -103,9 +103,10 @@ public:
 		if (m_processThread.joinable())
 		{
 			{
-				std::lock_guard<std::mutex> lock(m_mx);
+				std::lock_guard lock(m_mx);
+
 				m_stopped = true;
-				m_stopCv.notify_one();
+				m_cv.notify_one();
 			}
 
 			m_processThread.join();
@@ -141,10 +142,9 @@ public:
 		{
 			it = m_subs.emplace(topicName, 0).first;
 
-			if (m_connected && !m_justConnected)
-			{
-				MQTTClient_subscribe(m_client, topicName.c_str(), 0);
-			}
+			m_subscribes.push_back(topicName);
+			m_subscribed = true;
+			m_cv.notify_one();
 		}
 		++it->second;
 	}
@@ -162,61 +162,70 @@ public:
 			}
 		}
 
-		MQTTClient_unsubscribe(m_client, topicName.c_str());
+		m_unsubscribes.push_back(topicName);
+		m_unsubscribed = true;
+		m_cv.notify_one();
 	}
+
 
 private:
 	void DoProcess()
 	{
+		m_state = STATE_CONNECT;
+		m_disconnected = true;
+		m_subscribed = false;
+		m_unsubscribed = false;
+
 		while (!m_stopped)
 		{
-			bool connected = false;
-
+			switch (m_state)
 			{
-				std::unique_lock<std::mutex> lock(m_mx);
+			case STATE_CONNECT:
+				{
+					m_disconnected = !Connect();
+					m_state =!m_disconnected ? STATE_JUST_CONNECTED : STATE_RECONNECT;
+				}
+				break;
 
-				m_connected = Connect();
-				m_justConnected = m_connected;
-				connected = m_connected;
+			case STATE_RECONNECT:
+				{
+					WaitReconnect();
+					m_state = STATE_CONNECT;
+				}
+				break;
 
-				if (m_connected)
+			case STATE_JUST_CONNECTED:
 				{
 					FireConnected();
+					PrepareSubscribes();
+					m_state = STATE_SUBSCRIBE;
 				}
-			}
+				break;
 
-			if (!connected)
-			{
-				std::unique_lock<std::mutex> lock(m_mx);
-				if (m_stopped)
+			case STATE_SUBSCRIBE:
 				{
-					continue;
+					PerformSubscribe();
+					PerformUnsubscribe();
+					m_state = STATE_READY;
 				}
-				m_stopCv.wait_for(lock, std::chrono::seconds(RECONNECT_INTERVAL), [this]() {return m_stopped; });
-				continue;
-			}
+				break;
 
-			while (!m_stopped && m_connected)
-			{
-				std::unique_lock<std::mutex> lock(m_mx);
-				if (m_stopped)
+			case STATE_READY:
 				{
-					continue;
+					PerformReadyState();
 				}
+				break;
 
-				m_stopCv.wait_for(lock, std::chrono::seconds(1), [this]() {return m_stopped; });
-			}
-
-			if (!m_connected)
-			{
-				FireDisconnected();
-			}
+			case STATE_DISCONNECTED:
+				{
+					FireDisconnected();
+					m_state = STATE_RECONNECT;
+				}
+				break;
+			};
 		}
 
-		if (MQTTClient_isConnected(m_client))
-		{
-			MQTTClient_disconnect(m_client, DISCONNECT_TIMEOUT);
-		}
+		Disconnect();
 	}
 
 	bool Connect() const
@@ -229,10 +238,19 @@ private:
 		return MQTTClient_connect(m_client, &opts) == MQTTCLIENT_SUCCESS;
 	}
 
+	void WaitReconnect()
+	{
+		std::unique_lock<std::mutex> lock(m_mx);
+		if (m_stopped)
+		{
+			return;
+		}
+		m_cv.wait_for(lock, std::chrono::seconds(RECONNECT_INTERVAL), [this]() {return m_stopped; });
+	}
+
 	void FireConnected()
 	{
 		std::vector<BrokerEvents*> owners;
-		std::vector<std::string> sub;
 
 		{
 			std::lock_guard lock(m_mx);
@@ -241,21 +259,67 @@ private:
 			{
 				owners.push_back(owner);
 			}
-
-			for (const auto& subs : m_subs)
-			{
-				sub.push_back(subs.first);
-			}
 		}
-
-		//MQTTClient_subscribe(m_client, subs.first.c_str(), 0);
 
 		for (const auto& owner : owners)
 		{
 			owner->OnConnected(*this);
 		}
+	}
 
-		//PerformSubscribe();
+	void PerformSubscribe()
+	{
+		std::lock_guard lock(m_mx);
+
+		for (const auto& s : m_subscribes)
+		{
+			MQTTClient_subscribe(m_client, s.c_str(), 0);
+		}
+
+		m_subscribes.clear();
+	}
+
+	void PerformUnsubscribe()
+	{
+		std::lock_guard lock(m_mx);
+
+		for (const auto& s : m_unsubscribes)
+		{
+			MQTTClient_unsubscribe(m_client, s.c_str());
+		}
+
+		m_unsubscribes.clear();
+	}
+
+	void PerformReadyState()
+	{
+		std::unique_lock lock(m_mx);
+
+		while (true)
+		{
+			if (m_stopped)
+			{
+				m_state = STATE_STOPPED;
+			}
+			else if (m_disconnected)
+			{
+				m_state = STATE_DISCONNECTED;
+			}
+			else if (m_subscribed || m_unsubscribed)
+			{
+				m_state = STATE_SUBSCRIBE;
+			}
+			else
+			{
+				m_cv.wait(lock, [this]
+				{
+					return m_stopped || m_disconnected || m_subscribed || m_unsubscribed;
+				});
+				continue;
+			}
+
+			break;
+		}
 	}
 
 	void FireDisconnected()
@@ -276,15 +340,40 @@ private:
 		}
 	}
 
+	void PrepareSubscribes()
+	{
+		std::lock_guard lock(m_mx);
+
+		m_unsubscribes.clear();
+		m_unsubscribed = false;
+
+		m_subscribed = false;
+		m_subscribes.clear();
+
+		for (const auto& s : m_subs)
+		{
+			m_subscribes.push_back(s.first);
+		}
+	}
+
+	void Disconnect()
+	{
+		if (MQTTClient_isConnected(m_client))
+		{
+			MQTTClient_disconnect(m_client, DISCONNECT_TIMEOUT);
+		}
+	}
+
 	static void __onConnLost(void* context, char* cause)
 	{
 		static_cast<MqttBrokerImpl*>(context)->OnConnLost(cause);
 	}
 	void OnConnLost(char* cause)
 	{
-		std::lock_guard<std::mutex> lock(m_mx);
-		m_connected = false;
-		m_connectCv.notify_one();
+		std::lock_guard lock(m_mx);
+
+		m_disconnected = true;
+		m_cv.notify_one();
 	}
 
 	static int __onMessageArrived(void* context, char* topicName, int topicLen, MQTTClient_message* message)
@@ -325,10 +414,12 @@ private:
 	enum State
 	{
 		STATE_CONNECT,
-		STATE_FIRE_CONNECTED,
+		STATE_JUST_CONNECTED,
+		STATE_RECONNECT,
 		STATE_READY,
 		STATE_DISCONNECTED,
-		STATE_STOPPED
+		STATE_STOPPED,
+		STATE_SUBSCRIBE,
 	};
 	State m_state = STATE_CONNECT;
 
@@ -337,7 +428,7 @@ private:
 		CONNECT_TIMEOUT = 5,
 		DISCONNECT_TIMEOUT = 3,
 		RECONNECT_INTERVAL = 10,
-		KEEP_ALIVE_INTERVAL = 30,
+		KEEP_ALIVE_INTERVAL = 1,// 30,
 	};
 
 	class MQTTClientDestroyer
@@ -353,17 +444,20 @@ private:
 	std::unique_ptr<MQTTClient, MQTTClientDestroyer> m_clientPtr;
 
 	std::thread m_processThread;
+
 	std::mutex m_mx;
+	std::condition_variable m_cv;
 
-	std::condition_variable m_stopCv;
 	bool m_stopped = true;
-
-	std::condition_variable m_connectCv;
-	bool m_connected = false;
-	bool m_justConnected = false;
+	bool m_disconnected = false;
+	bool m_subscribed = false;
+	bool m_unsubscribed = false;
 
 	std::vector<BrokerEvents*> m_owners;
+
 	std::map<std::string, size_t> m_subs;
+	std::list<std::string> m_subscribes;
+	std::list<std::string> m_unsubscribes;
 };
 
 
