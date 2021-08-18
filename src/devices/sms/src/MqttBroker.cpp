@@ -137,10 +137,10 @@ public:
 	{
 		std::lock_guard lock(m_mx);
 
-		auto it = m_subs.find(topicName);
-		if (it == m_subs.end())
+		auto it = m_activeSubs.find(topicName);
+		if (it == m_activeSubs.end())
 		{
-			it = m_subs.emplace(topicName, 0).first;
+			it = m_activeSubs.emplace(topicName, 0).first;
 
 			m_subscribes.push_back(topicName);
 			m_subscribed = true;
@@ -153,8 +153,8 @@ public:
 	{
 		std::lock_guard lock(m_mx);
 
-		auto it = m_subs.find(topicName);
-		if (it != m_subs.end())
+		auto it = m_activeSubs.find(topicName);
+		if (it != m_activeSubs.end())
 		{
 			if ((--it->second) > 0)
 			{
@@ -384,7 +384,7 @@ private:
 		m_subscribed = false;
 		m_subscribes.clear();
 
-		for (const auto& s : m_subs)
+		for (const auto& s : m_activeSubs)
 		{
 			m_subscribes.push_back(s.first);
 		}
@@ -488,10 +488,9 @@ private:
 	bool m_unsubscribed = false;
 
 	std::vector<BrokerEvents*> m_owners;
-
-	std::map<std::string, size_t> m_subs;
-	std::list<std::string> m_subscribes;
-	std::list<std::string> m_unsubscribes;
+	std::map<std::string, size_t> m_activeSubs;
+	std::vector<std::string> m_subscribes;
+	std::vector<std::string> m_unsubscribes;
 };
 
 
