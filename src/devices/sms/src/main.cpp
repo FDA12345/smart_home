@@ -9,7 +9,7 @@ public:
 	void OnConnected(broker::BaseBroker& broker) override
 	{
 		std::cout << "connected" << std::endl;
-		broker.SubscribeTopic("$SYS/");
+		broker.SubscribeTopic("#");
 	}
 
 	void OnDisconnected(broker::BaseBroker& broker) override
@@ -19,7 +19,7 @@ public:
 
 	void OnMsgRecv(broker::BaseBroker& broker, const broker::Msg& msg) override
 	{
-		std::cout << "msg " << std::string(msg.Topic()) << std::endl;
+		//std::cout << "msg " << std::string(msg.Topic()) << std::endl;
 	}
 
 	void OnMsgSent(broker::BaseBroker& broker, const broker::Msg& msg) override
@@ -34,8 +34,8 @@ int main()
 	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
 
 	broker->SubscribeEvents(brokerEvents);
-	//broker->SubscribeTopic("$SYS/#");
-	broker->SubscribeTopic("#");
+	broker->SubscribeTopic("$SYS/#");
+	//broker->SubscribeTopic("#");
 
 	if (broker->Start())
 	{
@@ -46,7 +46,7 @@ int main()
 		std::cout << "start broker failed" << std::endl;
 	}
 
-	std::this_thread::sleep_for(std::chrono::seconds(60));
+	std::this_thread::sleep_for(std::chrono::seconds(10));
 
 	broker->Stop();
 	broker.reset();

@@ -284,7 +284,15 @@ private:
 
 		for (const auto& s : subs)
 		{
-			MQTTClient_subscribe(m_client, s.c_str(), 0);
+			if (!MQTTClient_isConnected(m_client))
+			{
+				break;
+			}
+
+			if (MQTTClient_subscribe(m_client, s.c_str(), 0) != MQTTCLIENT_SUCCESS)
+			{
+				break;
+			}
 		}
 	}
 
@@ -305,7 +313,15 @@ private:
 
 		for (const auto& s : unsubs)
 		{
-			MQTTClient_unsubscribe(m_client, s.c_str());
+			if (!MQTTClient_isConnected(m_client))
+			{
+				break;
+			}
+
+			if (MQTTClient_unsubscribe(m_client, s.c_str()) != MQTTCLIENT_SUCCESS)
+			{
+				break;
+			}
 		}
 	}
 
@@ -446,7 +462,7 @@ private:
 		CONNECT_TIMEOUT = 5,
 		DISCONNECT_TIMEOUT = 3,
 		RECONNECT_INTERVAL = 10,
-		KEEP_ALIVE_INTERVAL = 1,// 30,
+		KEEP_ALIVE_INTERVAL = 30,
 	};
 
 	class MQTTClientDestroyer
