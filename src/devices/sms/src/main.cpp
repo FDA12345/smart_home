@@ -9,6 +9,7 @@ public:
 	void OnConnected(broker::BaseBroker& broker) override
 	{
 		std::cout << "connected" << std::endl;
+		broker.SubscribeTopic("$SYS/");
 	}
 
 	void OnDisconnected(broker::BaseBroker& broker) override

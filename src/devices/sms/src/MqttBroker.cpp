@@ -269,26 +269,44 @@ private:
 
 	void PerformSubscribe()
 	{
-		std::lock_guard lock(m_mx);
+		std::vector<std::string> subs;
 
-		for (const auto& s : m_subscribes)
+		{
+			std::lock_guard lock(m_mx);
+
+			for (const auto& s : m_subscribes)
+			{
+				subs.push_back(s);
+			}
+
+			m_subscribes.clear();
+		}
+
+		for (const auto& s : subs)
 		{
 			MQTTClient_subscribe(m_client, s.c_str(), 0);
 		}
-
-		m_subscribes.clear();
 	}
 
 	void PerformUnsubscribe()
 	{
-		std::lock_guard lock(m_mx);
+		std::vector<std::string> unsubs;
 
-		for (const auto& s : m_unsubscribes)
+		{
+			std::lock_guard lock(m_mx);
+
+			for (const auto& s : m_unsubscribes)
+			{
+				unsubs.push_back(s);
+			}
+
+			m_unsubscribes.clear();
+		}
+
+		for (const auto& s : unsubs)
 		{
 			MQTTClient_unsubscribe(m_client, s.c_str());
 		}
-
-		m_unsubscribes.clear();
 	}
 
 	void PerformReadyState()
