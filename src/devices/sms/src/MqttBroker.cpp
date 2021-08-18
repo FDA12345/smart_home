@@ -4,7 +4,7 @@
 using namespace broker;
 
 
-class MqttMsg : public TopicMsg
+class MqttMsg : public Msg
 {
 public:
 	MqttMsg(MqttMsg&& right)

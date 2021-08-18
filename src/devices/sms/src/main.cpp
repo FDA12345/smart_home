@@ -16,12 +16,12 @@ public:
 		std::cout << "disconnected" << std::endl;
 	}
 
-	void OnMsgRecv(broker::BaseBroker& broker, const broker::TopicMsg& topicMsg) override
+	void OnMsgRecv(broker::BaseBroker& broker, const broker::Msg& msg) override
 	{
-		std::cout << "msg " << std::string(topicMsg.Topic()) << std::endl;
+		std::cout << "msg " << std::string(msg.Topic()) << std::endl;
 	}
 
-	void OnMsgSent(broker::BaseBroker& broker, const broker::TopicMsg& topicMsg) override
+	void OnMsgSent(broker::BaseBroker& broker, const broker::Msg& msg) override
 	{
 	}
 };

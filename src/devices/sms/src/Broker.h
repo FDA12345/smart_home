@@ -3,10 +3,10 @@
 namespace broker
 {
 
-class TopicMsg
+class Msg
 {
 public:
-	virtual ~TopicMsg() = default;
+	virtual ~Msg() = default;
 
 	virtual const std::string_view& Topic() const = 0;
 	virtual const std::string_view& Payload() const = 0;
@@ -22,8 +22,8 @@ public:
 	virtual void OnConnected(BaseBroker& broker) = 0;
 	virtual void OnDisconnected(BaseBroker& broker) = 0;
 
-	virtual void OnMsgRecv(BaseBroker& broker, const TopicMsg& topicMsg) = 0;
-	virtual void OnMsgSent(BaseBroker& broker, const TopicMsg& topicMsg) = 0;
+	virtual void OnMsgRecv(BaseBroker& broker, const Msg& msg) = 0;
+	virtual void OnMsgSent(BaseBroker& broker, const Msg& msg) = 0;
 };
 
 
