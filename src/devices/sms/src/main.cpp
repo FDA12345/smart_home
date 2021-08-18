@@ -2,9 +2,28 @@
 
 #include "MqttBroker.h"
 
+
+class OnTopicEvents : public broker::TopicEvents
+{
+public:
+	void OnMsgRecv(const broker::TopicMsg& topicMsg) override
+	{
+		std::cout << "msg " << std::string(topicMsg.Topic()) << std::endl;
+	}
+
+	void OnMsgSent(const broker::TopicMsg& topicMsg) override
+	{
+	}
+};
+
 int main()
 {
-	auto broker = MqttBroker::Create();
+	std::shared_ptr<OnTopicEvents> onTopicEvents(new OnTopicEvents());
+
+	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
+
+	broker->SubscribeEvents(onTopicEvents);
+	broker->SubscribeTopic("$SYS/#");
 
 	if (broker->Start())
 	{
