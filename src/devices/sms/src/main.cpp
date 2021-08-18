@@ -18,7 +18,7 @@ public:
 
 int main()
 {
-	std::shared_ptr<OnTopicEvents> onTopicEvents(new OnTopicEvents());
+	OnTopicEvents onTopicEvents;
 
 	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
 
@@ -34,7 +34,7 @@ int main()
 		std::cout << "start broker failed" << std::endl;
 	}
 
-	std::this_thread::sleep_for(std::chrono::seconds(1000));
+	std::this_thread::sleep_for(std::chrono::seconds(60));
 
 	broker->Stop();
 	broker.reset();

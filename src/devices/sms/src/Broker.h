@@ -16,9 +16,6 @@ public:
 class TopicEvents
 {
 public:
-	using Ptr = std::shared_ptr<TopicEvents>;
-
-public:
 	virtual ~TopicEvents() = default;
 
 	virtual void OnMsgRecv(const TopicMsg& topicMsg) = 0;
@@ -37,8 +34,8 @@ public:
 	virtual bool Start() = 0;
 	virtual void Stop() = 0;
 
-	virtual void SubscribeEvents(const TopicEvents::Ptr& eventsPtr) = 0;
-	virtual void UnsubscribeEvents(const TopicEvents::Ptr& eventsPtr) = 0;
+	virtual void SubscribeEvents(TopicEvents& topicEvents) = 0;
+	virtual void UnsubscribeEvents(TopicEvents& topicEvents) = 0;
 
 	virtual void SubscribeTopic(const std::string& topicName) = 0;
 	virtual void UnsubscribeTopic(const std::string& topicName) = 0;

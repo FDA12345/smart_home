@@ -115,17 +115,17 @@ public:
 		m_clientPtr.reset();
 	}
 
-	void SubscribeEvents(const TopicEvents::Ptr& eventsPtr) override
+	void SubscribeEvents(TopicEvents& topicEvents) override
 	{
 		std::lock_guard lock(m_mx);
-		m_owners.emplace_back(eventsPtr);
+		m_owners.emplace_back(&topicEvents);
 	}
 
-	void UnsubscribeEvents(const TopicEvents::Ptr& eventsPtr) override
+	void UnsubscribeEvents(TopicEvents& topicEvents) override
 	{
 		std::lock_guard lock(m_mx);
 
-		auto it = std::find(m_owners.begin(), m_owners.end(), eventsPtr);
+		auto it = std::find(m_owners.begin(), m_owners.end(), &topicEvents);
 		if (it != m_owners.end())
 		{
 			m_owners.erase(it);
@@ -263,7 +263,7 @@ private:
 	}
 	void OnMessageArrived(const MqttMsg& msg)
 	{
-		std::vector<TopicEvents::Ptr> owners;
+		std::vector<TopicEvents*> owners;
 
 		{
 			std::lock_guard lock(m_mx);
@@ -320,7 +320,7 @@ private:
 	std::condition_variable m_connectCv;
 	bool m_connected = false;
 
-	std::vector<TopicEvents::Ptr> m_owners;
+	std::vector<TopicEvents*> m_owners;
 	std::map<std::string, size_t> m_subs;
 };
 
