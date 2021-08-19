@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.15)
 project(SmartHome)
 
 set(SDK "${CMAKE_SOURCE_DIR}/sdk")
-#set(SDK "${CMAKE_SOURCE_DIR}/../smart_home_sdk")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -20,12 +19,12 @@ if(WIN32)
 endif()
 
 set_target_properties(paho-mqtt3c-static PROPERTIES
-	IMPORTED_LOCATION "${SDK}/paho.mqtt.c/build/src/Release/paho-mqtt3c-static${CMAKE_STATIC_LIBRARY_SUFFIX}"
-	IMPORTED_LOCATION_DEBUG "${SDK}/paho.mqtt.c/build/src/Debug/paho-mqtt3c-static${CMAKE_STATIC_LIBRARY_SUFFIX}"
+	IMPORTED_LOCATION "${SDK}/paho.mqtt.c_1.3.9/build/src/Release/paho-mqtt3c-static${CMAKE_STATIC_LIBRARY_SUFFIX}"
+	IMPORTED_LOCATION_DEBUG "${SDK}/paho.mqtt.c_1.3.9/build/src/Debug/paho-mqtt3c-static${CMAKE_STATIC_LIBRARY_SUFFIX}"
 	IMPORTED_CONFIGURATIONS "RELEASE;DEBUG"
 )
 
-target_include_directories(paho-mqtt3c-static INTERFACE "${SDK}/paho.mqtt.c/src")
+target_include_directories(paho-mqtt3c-static INTERFACE "${SDK}/paho.mqtt.c_1.3.9/src")
 
 
 add_subdirectory(src)
