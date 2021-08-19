@@ -2,6 +2,8 @@
 
 #include "MqttBroker.h"
 
+#include <boost/asio.hpp>
+#include <boost/filesystem.hpp>
 
 class OnBrokerEvents : public broker::BrokerEvents
 {
@@ -25,6 +27,13 @@ public:
 
 int main()
 {
+	for (const auto& f : boost::filesystem::directory_iterator("c:/"))
+	{
+		std::cout << f.path().string() << std::endl;
+	}
+
+	boost::asio::io_service io;
+
 	OnBrokerEvents brokerEvents;
 
 	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
