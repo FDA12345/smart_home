@@ -11,17 +11,15 @@ set(HEADERS
 	src/common/NetServer.h
 
 	src/stdafx.h
-	src/BrokerNetServer.h
 	src/MqttBroker.h
-	src/MqttNetServer.h
+	src/BrokerNetServer.h
 	src/HttpNetServer.h
 )
 
 set(SOURCES
 	src/main.cpp
-	src/BrokerNetServer.cpp
 	src/MqttBroker.cpp
-	src/MqttNetServer.cpp
+	src/BrokerNetServer.cpp
 	src/HttpNetServer.cpp
 )
 
