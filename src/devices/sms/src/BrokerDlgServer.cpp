@@ -1,9 +1,9 @@
 #include "BrokerDlgServer.h"
 
-class BrokerDlgServerImpl : public DlgServer
+class BrokerDlgServerImpl : public dlg_server::Server
 {
 public:
-	bool AddRoute(const std::string& path, std::function<void(const std::string_view& payload)> routeFn) override
+	bool AddRoute(const std::string& routePath, std::function<void(const std::string_view& payload)> routeFn) override
 	{
 		return false;
 	}

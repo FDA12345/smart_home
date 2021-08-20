@@ -2,10 +2,10 @@
 
 #include "common/DlgServer.h"
 
-class BrokerDlgServer : public DlgServer
+class BrokerDlgServer : public dlg_server::Server
 {
 public:
-	using Ptr = std::unique_ptr<DlgServer>;
+	using Ptr = std::unique_ptr<dlg_server::Server>;
 
 public:
 	static Ptr Create();

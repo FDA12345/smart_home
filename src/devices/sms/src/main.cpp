@@ -7,6 +7,11 @@ int main()
 {
 	auto dlgServer = BrokerDlgServer::Create();
 
+	dlgServer->AddRoute("services", [&dlgServer](const std::string_view& payload)
+	{
+		//dlgServer->Send("services", "me1234");
+	});
+
 	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
 
 	//broker->SubscribeEvents(brokerEvents);
