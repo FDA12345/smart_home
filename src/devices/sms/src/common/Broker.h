@@ -40,7 +40,6 @@ public:
 class Broker : public BaseBroker
 {
 public:
-	using Ptr = std::unique_ptr<Broker>;
 
 public:
 	virtual bool Start() = 0;
@@ -49,5 +48,7 @@ public:
 	virtual void SubscribeEvents(BrokerEvents& brokerEvents) = 0;
 	virtual void UnsubscribeEvents(BrokerEvents& brokerEvents) = 0;
 };
+
+using Ptr = std::unique_ptr<Broker>;
 
 }; //namespace broker

@@ -2,8 +2,12 @@
 
 #include "common/Broker.h"
 
-class MqttBroker
+namespace broker
 {
-public:
-	static broker::Broker::Ptr Create(const std::string& address, const std::string& clientId);
-};
+namespace mqtt
+{
+
+Ptr Create(const std::string& address, const std::string& clientId);
+
+};//mqtt
+};//broker

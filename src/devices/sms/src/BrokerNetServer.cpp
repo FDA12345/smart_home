@@ -1,11 +1,16 @@
 #include "BrokerNetServer.h"
 
 using namespace net_server;
-using namespace broker;
+using namespace net_server::broker;
 
 class BrokerServerImpl : public Server
 {
 public:
+	BrokerServerImpl(::broker::Ptr&& broker)
+		: m_broker(std::move(broker))
+	{
+	}
+
 	void Subscribe(const ServerEvents::Ptr& owner) override
 	{
 	}
@@ -32,10 +37,13 @@ public:
 	void Stop() override
 	{
 	}
+
+private:
+	::broker::Ptr m_broker;
 };
 
 
-Ptr net_server::broker::CreateServer()
+Ptr net_server::broker::CreateServer(::broker::Ptr&& broker)
 {
-	return std::make_unique<BrokerServerImpl>();
+	return std::make_unique<BrokerServerImpl>(std::move(broker));
 }

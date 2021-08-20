@@ -2,6 +2,7 @@
 #include "MQTTClient.h"
 
 using namespace broker;
+using namespace broker::mqtt;
 
 
 class MqttMsg : public Msg
@@ -494,7 +495,7 @@ private:
 };
 
 
-Broker::Ptr MqttBroker::Create(const std::string& address, const std::string& clientId)
+Ptr broker::mqtt::Create(const std::string& address, const std::string& clientId)
 {
 	return std::make_unique<MqttBrokerImpl>(address, clientId);
 }
