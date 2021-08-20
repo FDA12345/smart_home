@@ -8,19 +8,19 @@ target_precompile_headers(sms PRIVATE src/stdafx.h)
 
 set(HEADERS
 	src/common/Broker.h
-	src/common/DlgServer.h
+	src/common/NetServer.h
 	
 	src/stdafx.h
 	src/MqttBroker.h
-	src/BrokerDlgServer.h
-	src/HttpDlgServer.h
+	src/BrokerNetServer.h
+	src/HttpNetServer.h
 )
 
 set(SOURCES
 	src/main.cpp
 	src/MqttBroker.cpp
-	src/BrokerDlgServer.cpp
-	src/HttpDlgServer.cpp
+	src/BrokerNetServer.cpp
+	src/HttpNetServer.cpp
 )
 
 target_sources(sms PRIVATE ${HEADERS} ${SOURCES})

@@ -1,16 +1,13 @@
 #include <iostream>
 
 #include "MqttBroker.h"
-#include "BrokerDlgServer.h"
+#include "BrokerNetServer.h"
 
 int main()
 {
-	auto dlgServer = BrokerDlgServer::Create();
+	auto dlgServer = net_server::broker::CreateServer();
 
-	dlgServer->AddRoute("services", [&dlgServer](const std::string_view& payload)
-	{
-		//dlgServer->Send("services", "me1234");
-	});
+	dlgServer->RouteAdd("services");
 
 	auto broker = MqttBroker::Create("tcp://mqtt.eclipseprojects.io:1883", "fda123");
 
