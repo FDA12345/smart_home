@@ -23,6 +23,19 @@ public:
 
 	virtual const std::string_view& Payload() const = 0;
 	virtual void Payload(const std::string_view& payload) = 0;
+
+	enum ResultCodes
+	{
+		CODE_OK,
+		CODE_NOT_FOUND,
+		CODE_INTERNAL_ERROR,
+		CODE_BUSY,
+	};
+	virtual ResultCodes Result() const = 0;
+	virtual void Result(ResultCodes code) = 0;
+
+	virtual const std::string& ResultMsg() const = 0;
+	virtual void ResultMsg(const std::string& msg) = 0;
 };
 
 class ServerEvents
