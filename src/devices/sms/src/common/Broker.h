@@ -32,8 +32,6 @@ class BaseBroker
 public:
 	virtual ~BaseBroker() = default;
 
-	virtual const std::string& ClientId() const = 0;
-
 	virtual void SubscribeTopic(const std::string& topicName) = 0;
 	virtual void UnsubscribeTopic(const std::string& topicName) = 0;
 };
@@ -49,6 +47,8 @@ public:
 
 	virtual void SubscribeEvents(BrokerEvents& brokerEvents) = 0;
 	virtual void UnsubscribeEvents(BrokerEvents& brokerEvents) = 0;
+
+	virtual void Publish(const std::string& topicName, std::vector<char>&& payload) = 0;
 };
 
 using Ptr = std::unique_ptr<Broker>;

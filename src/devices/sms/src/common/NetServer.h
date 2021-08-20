@@ -38,29 +38,16 @@ public:
 	virtual void ResultMsg(const std::string& msg) = 0;
 };
 
-class ServerEvents
-{
-public:
-	using Ptr = std::shared_ptr<ServerEvents>;
-
-public:
-	virtual ~ServerEvents() = default;
-
-	virtual void OnRequest(const Request& req, Response& rsp) = 0;
-};
-
 class Server
 {
 public:
+	using RouteFn = std::function<bool(const Request& req, Response& rsp)>;
+
+public:
 	virtual ~Server() = default;
 
-	//subscribing to events
-	virtual void Subscribe(const ServerEvents::Ptr& owner) = 0;
-	//unsubscribing to events
-	virtual void Unsubscribe(const ServerEvents::Ptr& owner) = 0;
-
 	//add route - path to resource, routeFn - async callback on route
-	virtual bool RouteAdd(const std::string& routePath) = 0;
+	virtual bool RouteAdd(const std::string& routePath, const RouteFn& routeFn) = 0;
 	//remove route - path to resource
 	virtual bool RouteRemove(const std::string& routePath) = 0;
 

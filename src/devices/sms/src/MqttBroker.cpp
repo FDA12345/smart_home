@@ -72,11 +72,6 @@ public:
 	{
 	}
 
-	const std::string& ClientId() const override
-	{
-		return m_clientId;
-	}
-
 	bool Start() override
 	{
 		Stop();
@@ -173,6 +168,15 @@ public:
 		m_cv.notify_one();
 	}
 
+	void Publish(const std::string& topicName, std::vector<char>&& payload) override
+	{
+		PublishInfo p{ topicName, std::move(payload) };
+
+		std::lock_guard lock(m_mx);
+		m_published = true;
+		m_publishes.emplace_back(std::move(p));
+		m_cv.notify_one();
+	}
 
 private:
 	void DoProcess()
@@ -181,6 +185,7 @@ private:
 		m_disconnected = true;
 		m_subscribed = false;
 		m_unsubscribed = false;
+		m_published = false;
 
 		while (!m_stopped)
 		{
@@ -204,6 +209,7 @@ private:
 				{
 					FireConnected();
 					PrepareSubscribes();
+					PerformPublish();
 					m_state = STATE_SUBSCRIBE;
 				}
 				break;
@@ -212,6 +218,13 @@ private:
 				{
 					PerformSubscribe();
 					PerformUnsubscribe();
+					m_state = STATE_READY;
+				}
+				break;
+
+			case STATE_PUBLISH:
+				{
+					PerformPublish();
 					m_state = STATE_READY;
 				}
 				break;
@@ -349,6 +362,10 @@ private:
 			{
 				m_state = STATE_SUBSCRIBE;
 			}
+			else if (m_published)
+			{
+				m_state = STATE_PUBLISH;
+			}
 			else
 			{
 				m_cv.wait(lock, [this]
@@ -394,6 +411,46 @@ private:
 		{
 			m_subscribes.push_back(s.first);
 		}
+	}
+
+	void PerformPublish()
+	{
+		std::list<PublishInfo> publishes;
+
+		{
+			std::lock_guard lock(m_mx);
+			publishes.splice(publishes.begin(), m_publishes);
+		}
+
+		while (!publishes.empty())
+		{
+			const auto& p = publishes.front();
+
+			if (!MQTTClient_isConnected(m_client))
+			{
+				break;
+			}
+
+			if (MQTTClient_publish(m_client, p.topic.c_str(), p.payload.size(),
+				p.payload.empty() ? nullptr : &p.payload[0], 0, 0, nullptr) != MQTTCLIENT_SUCCESS)
+			{
+				break;
+			}
+
+			publishes.pop_front();
+		}
+
+		//all sent
+		if (publishes.empty())
+		{
+			return;
+		}
+
+		//more to send
+		std::lock_guard lock(m_mx);
+		m_publishes.splice(m_publishes.begin(), publishes);
+		m_published = true;
+		m_cv.notify_one();
 	}
 
 	void Disconnect()
@@ -460,6 +517,7 @@ private:
 		STATE_DISCONNECTED,
 		STATE_STOPPED,
 		STATE_SUBSCRIBE,
+		STATE_PUBLISH,
 	};
 	State m_state = STATE_CONNECT;
 
@@ -492,11 +550,19 @@ private:
 	bool m_disconnected = false;
 	bool m_subscribed = false;
 	bool m_unsubscribed = false;
+	bool m_published = false;
 
 	std::vector<BrokerEvents*> m_owners;
 	std::map<std::string, size_t> m_activeSubs;
 	std::vector<std::string> m_subscribes;
 	std::vector<std::string> m_unsubscribes;
+
+	struct PublishInfo
+	{
+		std::string topic;
+		std::vector<char> payload;
+	};
+	std::list<PublishInfo> m_publishes;
 };
 
 

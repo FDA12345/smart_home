@@ -3,6 +3,68 @@
 using namespace ::broker;
 using namespace net_server;
 
+
+class RequestImpl : public Request
+{
+public:
+	RequestImpl(const Msg& msg)
+		: m_topic(msg.Topic())
+		, m_payload(msg.Payload())
+	{
+	}
+
+	const std::string& Route() const override
+	{
+		return m_topic;
+	}
+
+	const std::string_view& Payload() const override
+	{
+		return m_payload;
+	}
+
+private:
+	std::string m_topic;
+	const std::string_view& m_payload;
+};
+
+
+
+class ResponseImpl : public Response
+{
+public:
+	const std::string_view& Payload() const override
+	{
+		return m_payloadView;
+	}
+
+	void Payload(const std::string_view& payload) override
+	{
+		m_payload = std::vector<char>(payload[0], payload[payload.size()]);
+		m_payloadView = std::string_view(&m_payload[0], m_payload.size());
+	}
+
+	ResultCodes Result() const override { return m_result; }
+	void Result(ResultCodes code) override { m_result = code; }
+
+	const std::string& ResultMsg() const override { return m_resultMsg; }
+	void ResultMsg(const std::string& msg) override { m_resultMsg = msg; }
+
+	std::vector<char>&& TransferPayload()
+	{
+		m_payloadView = std::string_view();
+		return std::move(m_payload);
+	}
+private:
+	std::string_view m_payloadView;
+	std::vector<char> m_payload;
+
+	ResultCodes m_result = CODE_OK;
+	std::string m_resultMsg;
+};
+
+
+
 class BrokerServerImpl :
 	public Server,
 	private BrokerEvents
@@ -30,6 +92,28 @@ public:
 
 	void OnMsgRecv(BaseBroker& broker, const Msg& msg) override
 	{
+		const std::string& resource = std::string(msg.Topic());
+
+		RouteInfo routeInfo;
+		{
+			std::lock_guard lock(m_mx);
+
+			auto it = m_routes.find(resource);
+			if (it == m_routes.end())
+			{
+				return;
+			}
+
+			routeInfo = it->second;
+		}
+
+		RequestImpl req{ msg };
+		ResponseImpl rsp;
+
+		if (routeInfo.routeFn(req, rsp))
+		{
+			m_broker->Publish(routeInfo.responseTopic, rsp.TransferPayload());
+		}
 	}
 
 	void OnMsgSent(BaseBroker& broker, const Msg& msg) override
@@ -37,34 +121,39 @@ public:
 	}
 
 
-	//Server
-	void Subscribe(const ServerEvents::Ptr& owner) override
+	bool RouteAdd(const std::string& routePath, const RouteFn& routeFn) override
 	{
-		std::lock_guard lock(m_mx);
-		m_owners.push_back(owner);
-	}
+		const std::string& req = GetRequestRouteTopic(routePath);
+		const std::string& rsp = GetResponseRouteTopic(routePath);
 
-	void Unsubscribe(const ServerEvents::Ptr& owner) override
-	{
 		std::lock_guard lock(m_mx);
 
-		auto it = std::find(m_owners.begin(), m_owners.end(), owner);
-		if (it != m_owners.end())
+		auto it = m_routes.find(req);
+		if (it == m_routes.end())
 		{
-			m_owners.erase(it);
+			m_routes[req] = RouteInfo{ rsp, routeFn };
+			m_broker->SubscribeTopic(req);
+			return true;
 		}
-	}
 
-	bool RouteAdd(const std::string& routePath) override
-	{
-		m_broker->SubscribeTopic(GetRequestRouteTopic(routePath));
-		return true;
+		return false;
 	}
 
 	bool RouteRemove(const std::string& routePath) override
 	{
-		m_broker->UnsubscribeTopic(GetRequestRouteTopic(routePath));
-		return true;
+		const std::string& resource = GetRequestRouteTopic(routePath);
+
+		std::lock_guard lock(m_mx);
+
+		auto it = m_routes.find(resource);
+		if (it != m_routes.end())
+		{
+			m_broker->UnsubscribeTopic(resource);
+			m_routes.erase(it);
+			return true;
+		}
+
+		return false;
 	}
 
 	bool Start() override
@@ -78,17 +167,28 @@ public:
 	}
 
 private:
-	std::string GetRequestRouteTopic(const std::string& routePath) const
+	static std::string GetRequestRouteTopic(const std::string& routePath)
 	{
-		return routePath + "/" + m_broker->ClientId() + "/req";
+		return routePath;// +"/req";
 	}
+
+	static std::string GetResponseRouteTopic(const std::string& routePath)
+	{
+		return routePath;// +"/rsp";
+	}
+
+private:
+	struct RouteInfo
+	{
+		std::string responseTopic;
+		RouteFn routeFn;
+	};
 
 private:
 	::broker::Ptr m_broker;
 
 	std::mutex m_mx;
-	std::vector<ServerEvents::Ptr> m_owners;
-	std::map<std::string, size_t> m_subs;
+	std::map<std::string, RouteInfo> m_routes;
 };
 
 
