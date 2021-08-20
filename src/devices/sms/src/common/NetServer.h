@@ -62,7 +62,7 @@ public:
 	//add route - path to resource, routeFn - async callback on route
 	virtual bool RouteAdd(const std::string& routePath) = 0;
 	//remove route - path to resource
-	virtual bool RouteRemove(const std::string& path) = 0;
+	virtual bool RouteRemove(const std::string& routePath) = 0;
 
 	//start server
 	virtual bool Start() = 0;

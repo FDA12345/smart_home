@@ -72,6 +72,11 @@ public:
 	{
 	}
 
+	const std::string& ClientId() const override
+	{
+		return m_clientId;
+	}
+
 	bool Start() override
 	{
 		Stop();

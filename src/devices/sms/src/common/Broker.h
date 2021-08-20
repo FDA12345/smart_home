@@ -32,6 +32,8 @@ class BaseBroker
 public:
 	virtual ~BaseBroker() = default;
 
+	virtual const std::string& ClientId() const = 0;
+
 	virtual void SubscribeTopic(const std::string& topicName) = 0;
 	virtual void UnsubscribeTopic(const std::string& topicName) = 0;
 };
