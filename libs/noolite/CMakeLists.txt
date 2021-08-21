@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-add_library(noolite src/main.cpp)
+add_library(noolite src/noolite.cpp)
 
 target_link_libraries(noolite PRIVATE boost)
 target_include_directories(noolite PUBLIC include)
@@ -14,7 +14,7 @@ set(HEADERS
 )
 
 set(SOURCES
-	src/main.cpp
+	src/noolite.cpp
 )
 
 target_sources(noolite PRIVATE ${HEADERS} ${SOURCES})
