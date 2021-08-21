@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_executable(sms src/main.cpp)
 
-target_link_libraries(sms PRIVATE paho-mqtt3c-static  boost)
+target_link_libraries(sms PRIVATE paho-mqtt3c-static boost noolite)
 
 target_precompile_headers(sms PRIVATE src/stdafx.h)
 
