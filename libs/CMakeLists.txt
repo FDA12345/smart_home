@@ -1,3 +1,5 @@
 add_subdirectory(paho-mqtt-c)
 add_subdirectory(boost)
 add_subdirectory(noolite)
+add_subdirectory(finglai_fths01)
+add_subdirectory(modbus)
