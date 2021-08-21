@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 
-add_executable(sms src/main.cpp)
+add_executable(prototype src/main.cpp)
 
-target_link_libraries(sms PRIVATE paho-mqtt3c-static boost noolite)
+target_link_libraries(prototype PRIVATE paho-mqtt-c boost noolite)
 
-target_precompile_headers(sms PRIVATE src/stdafx.h)
+target_precompile_headers(prototype PRIVATE src/stdafx.h)
 
 set(HEADERS
 	src/common/Broker.h
@@ -23,5 +23,5 @@ set(SOURCES
 	src/HttpNetServer.cpp
 )
 
-target_sources(sms PRIVATE ${HEADERS} ${SOURCES})
+target_sources(prototype PRIVATE ${HEADERS} ${SOURCES})
 
