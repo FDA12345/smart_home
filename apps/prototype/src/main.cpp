@@ -2,9 +2,12 @@
 
 #include "MqttBroker.h"
 #include "BrokerNetServer.h"
+#include "noolite.h"
 
 int main()
 {
+	auto ver = noolite_version();
+
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
 	auto server = net_server::broker::CreateServer(std::move(broker));
 
