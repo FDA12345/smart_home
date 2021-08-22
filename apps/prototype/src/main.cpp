@@ -8,6 +8,7 @@
 #include "finglai_fths01.h"
 #include "wirenboard.h"
 #include "huawei.h"
+#include "serial.h"
 
 int main()
 {
@@ -16,6 +17,8 @@ int main()
 	auto v3 = finglai_fths01_version();
 	auto v4 = wirenboard_version();
 	auto v5 = huawei_version();
+	auto v6 = serial_version();
+
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
 	auto server = net_server::broker::CreateServer(std::move(broker));
