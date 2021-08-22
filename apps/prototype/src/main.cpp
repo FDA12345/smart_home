@@ -7,12 +7,15 @@
 #include "modbus.h"
 #include "finglai_fths01.h"
 #include "wirenboard.h"
+#include "huawei.h"
 
 int main()
 {
 	auto v1 = noolite_version();
 	auto v2 = modbus_version();
 	auto v3 = finglai_fths01_version();
+	auto v4 = wirenboard_version();
+	auto v5 = huawei_version();
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
 	auto server = net_server::broker::CreateServer(std::move(broker));

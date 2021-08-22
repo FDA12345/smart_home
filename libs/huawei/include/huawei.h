@@ -1,3 +1,3 @@
 #pragma once
 
-int wirenboard_version();
+int huawei_version();

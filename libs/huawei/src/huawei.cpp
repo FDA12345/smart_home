@@ -1,6 +1,6 @@
-#include "wirenboard.h"
+#include "huawei.h"
 
-int wirenboard_version()
+int huawei_version()
 {
 	return 123;
 }
