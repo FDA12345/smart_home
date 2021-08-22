@@ -6,6 +6,7 @@
 #include "noolite.h"
 #include "modbus.h"
 #include "finglai_fths01.h"
+#include "wirenboard.h"
 
 int main()
 {
