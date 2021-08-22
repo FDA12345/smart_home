@@ -1,0 +1,6 @@
+add_subdirectory(noolite)
+add_subdirectory(finglai_fths01)
+add_subdirectory(modbus)
+add_subdirectory(wirenboard)
+add_subdirectory(huawei)
+add_subdirectory(serial)
