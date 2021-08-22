@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_library(modbus src/modbus.cpp)
 
-target_link_libraries(modbus PRIVATE boost)
+target_link_libraries(modbus)
 target_include_directories(modbus PUBLIC include)
 
 target_precompile_headers(modbus PRIVATE src/stdafx.h)

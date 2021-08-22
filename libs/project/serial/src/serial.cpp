@@ -1,6 +1,15 @@
 #include "serial.h"
 
-int serial_version()
+namespace serial
 {
-	return 1234;
+
+class SerialImpl : public Serial
+{
+};
+
+Ptr Create(const Params& params)
+{
+	return std::make_unique<SerialImpl>();
 }
+
+};//namespace serial

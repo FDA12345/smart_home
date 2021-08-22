@@ -17,7 +17,9 @@ int main()
 	auto v3 = finglai_fths01_version();
 	auto v4 = wirenboard_version();
 	auto v5 = huawei_version();
-	auto v6 = serial_version();
+
+
+	auto serial = serial::Create({});
 
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");

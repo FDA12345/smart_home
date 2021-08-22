@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_library(noolite src/noolite.cpp)
 
-target_link_libraries(noolite PRIVATE boost)
+target_link_libraries(noolite)
 target_include_directories(noolite PUBLIC include)
 
 target_precompile_headers(noolite PRIVATE src/stdafx.h)
