@@ -17,9 +17,14 @@ public:
 	virtual void Stop() = 0;
 
 	//send init command to dongle
-	virtual void Init() = 0;
+	virtual bool Init() = 0;
 	//send reboot command to dongle
-	virtual void Reboot() = 0;
+	virtual bool Reboot() = 0;
+
+	//switch relay on
+	virtual bool SwitchOn() = 0;
+	//switch relay off
+	virtual bool SwitchOff() = 0;
 };
 
 using Ptr = std::unique_ptr<Dongle>;

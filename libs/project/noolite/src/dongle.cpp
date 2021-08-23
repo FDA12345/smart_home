@@ -41,18 +41,24 @@ public:
 		}
 	}
 
-	void Reboot() override
+	bool Reboot() override
 	{
+		return false;
 	}
 
-	void Init() override
+	bool Init() override
 	{
-		std::vector<char> buf;
-		m_serial->Write(&buf[0], buf.size());
+		return false;
 	}
 
-	void SwitchOn()
+	bool SwitchOn() override
 	{
+		return false;
+	}
+
+	bool SwitchOff() override
+	{
+		return false;
 	}
 
 private:
