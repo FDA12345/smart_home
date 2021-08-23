@@ -4,9 +4,13 @@
 #include "BrokerNetServer.h"
 
 #include "noolite.h"
+#include "logger.h"
 
 int main()
 {
+	auto log = logger::Create("prototype.log");
+	log->Info("app", "started");
+
 	serial::Params serialParams;
 	serialParams.serialName = "COM6";
 	serialParams.baudRate = 9600;
