@@ -6,6 +6,29 @@
 namespace serial
 {
 
+size_t Serial::Write(const char* data, size_t count)
+{
+	return Write(data, 0, count);
+}
+
+size_t Serial::Read(char* data, size_t count)
+{
+	return Read(data, 0, count);
+}
+
+void Serial::WriteAsync(const char* data, size_t count, OnWriteFn onWriteFn)
+{
+	WriteAsync(data, 0, count, onWriteFn);
+}
+
+void Serial::ReadAsync(char* data, size_t count, OnReadFn onReadFn)
+{
+	ReadAsync(data, 0, count, onReadFn);
+}
+
+
+
+
 class SerialImpl : public Serial
 {
 public:
@@ -48,6 +71,36 @@ public:
 			boost::system::error_code ec;
 			m_port.close(ec);
 		}
+	}
+
+	size_t Write(const char* data, size_t offset, size_t count) override
+	{
+		boost::system::error_code ec;
+		return boost::asio::write(m_port, boost::asio::const_buffer(data + offset, count), ec);
+	}
+
+	size_t Read(char* data, size_t offset, size_t count) override
+	{
+		boost::system::error_code ec;
+		return boost::asio::read(m_port, boost::asio::mutable_buffer(data + offset, count), ec);
+	}
+
+	void WriteAsync(const char* data, size_t offset, size_t count, OnWriteFn onWriteFn) override
+	{
+		boost::asio::async_write(m_port, boost::asio::const_buffer(data + offset, count),
+		[onWriteFn](const boost::system::error_code& ec, std::size_t transferred)
+		{
+			onWriteFn(ec ? true: false, transferred);
+		});
+	}
+
+	void ReadAsync(char* data, size_t offset, size_t count, OnReadFn onReadFn) override
+	{
+		boost::asio::async_read(m_port, boost::asio::mutable_buffer(data + offset, count),
+			[onReadFn](const boost::system::error_code& ec, std::size_t transferred)
+		{
+			onReadFn(ec ? true : false, transferred);
+		});
 	}
 
 private:

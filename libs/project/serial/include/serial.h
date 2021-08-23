@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 namespace serial
 {
 	enum StopBits
@@ -31,6 +33,20 @@ namespace serial
 
 		virtual bool Open() = 0;
 		virtual void Close() = 0;
+
+		virtual size_t Write(const char* data, size_t offset, size_t count) = 0;
+		size_t Write(const char* data, size_t count);
+
+		using OnWriteFn = std::function<void(bool error, size_t transferred)>;
+		virtual void WriteAsync(const char* data, size_t offset, size_t count, OnWriteFn onWriteFn) = 0;
+		void WriteAsync(const char* data, size_t count, OnWriteFn onWriteFn);
+
+		virtual size_t Read(char* data, size_t offset, size_t count) = 0;
+		size_t Read(char* data, size_t count);
+
+		using OnReadFn = std::function<void(bool error, size_t transferred)>;
+		virtual void ReadAsync(char* data, size_t offset, size_t count, OnReadFn onReadFn) = 0;
+		void ReadAsync(char* data, size_t count, OnReadFn onReadFn);
 	};
 
 	struct Params

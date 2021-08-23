@@ -1,5 +1,7 @@
 #pragma once
 
+#include "serial.h"
+
 namespace noolite
 {
 
@@ -11,7 +13,7 @@ class Dongle
 public:
 	virtual ~Dongle() = default;
 
-	virtual bool Start() = 0;
+	virtual bool Start(const serial::Params& serialParams) = 0;
 	virtual void Stop() = 0;
 
 	//send init command to dongle

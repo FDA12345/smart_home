@@ -7,10 +7,20 @@
 
 int main()
 {
+	serial::Params serialParams;
+	serialParams.serialName = "COM6";
+	serialParams.baudRate = 9600;
+	serialParams.stopBits = serial::STOPBITS_1_0;
+	serialParams.parity = serial::PARITY_NONE;
+	serialParams.flowControl = serial::FLOW_CONTROL_NONE;
+	serialParams.characterSize = 8;
+
 	auto dongle = noolite::CreateDongle();
-	if (dongle && dongle->Start())
+	if (dongle && dongle->Start(serialParams))
 	{
 		dongle->Init();
+
+		//dongle->SwitchOn();
 	}
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
