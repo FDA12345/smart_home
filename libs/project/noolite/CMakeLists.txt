@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-add_library(noolite src/noolite.cpp)
+add_library(noolite src/dongle.cpp)
 
 target_link_libraries(noolite PRIVATE serial)
 target_include_directories(noolite PUBLIC include)
@@ -22,7 +22,7 @@ set(HEADERS
 )
 
 set(SOURCES
-	src/noolite.cpp
+	src/dongle.cpp
 )
 
 target_sources(noolite PRIVATE ${HEADERS} ${SOURCES})

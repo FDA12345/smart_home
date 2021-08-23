@@ -7,6 +7,12 @@
 
 int main()
 {
+	auto dongle = noolite::CreateDongle();
+	if (dongle && dongle->Start())
+	{
+		dongle->Init();
+	}
+
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
 	auto server = net_server::broker::CreateServer(std::move(broker));
 
