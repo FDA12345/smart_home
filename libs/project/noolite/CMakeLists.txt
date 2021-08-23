@@ -9,6 +9,7 @@ target_precompile_headers(noolite PRIVATE src/stdafx.h)
 
 set(HEADERS
 	include/noolite.h
+	include/device_info.h
 	include/dongle.h
 
 	src/stdafx.h

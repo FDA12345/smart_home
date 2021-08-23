@@ -1,3 +1,3 @@
 #pragma once
 
-#include "dongle.h"
+#include "device_info.h"
