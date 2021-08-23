@@ -18,6 +18,7 @@ set(HEADERS
 	src/noolite/cmd.h
 	src/noolite/control.h
 	src/noolite/answer.h
+	src/noolite/packet.h
 )
 
 set(SOURCES

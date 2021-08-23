@@ -3,6 +3,10 @@
 #include "noolite/cmd.h"
 #include "noolite/control.h"
 #include "noolite/answer.h"
+#include "noolite/packet.h"
+#include "noolite/header.h"
+#include "noolite/footer.h"
+
 #include "dongle_mode.h"
 
 /*
