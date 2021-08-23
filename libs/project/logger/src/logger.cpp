@@ -51,6 +51,8 @@ public:
 private:
 	void Out(const std::string& level, const std::string& name, const std::string& msg) override
 	{
+		std::lock_guard lock(m_mx);
+
 		FILE *f = fopen(m_fileName.c_str(), "a+");
 		if (!f)
 		{
@@ -82,6 +84,8 @@ private:
 private:
 	const bool m_console;
 	const std::string m_fileName;
+
+	std::mutex m_mx;
 };
 
 
