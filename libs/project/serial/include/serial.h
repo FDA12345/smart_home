@@ -29,10 +29,14 @@ namespace serial
 	public:
 		virtual ~Serial() = default;
 
+		virtual bool Open() = 0;
+		virtual void Close() = 0;
 	};
 
 	struct Params
 	{
+		std::string serialName;
+
 		size_t baudRate = 9600;
 		StopBits stopBits = STOPBITS_1_0;
 		Parity parity = PARITY_NONE;

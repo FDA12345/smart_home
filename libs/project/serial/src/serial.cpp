@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "serial.h"
 
 #include <boost/asio.hpp>
@@ -14,7 +15,78 @@ public:
 	{
 	}
 
+	bool Open() override
+	{
+		Close();
+
+		while (true)
+		{
+			boost::system::error_code ec;
+
+			m_port.open(NormalizeSerialName(m_params.serialName), ec);
+			if (ec)
+			{
+				break;
+			}
+
+			if (!Setup())
+			{
+				break;
+			}
+
+			return true;
+		}
+
+		Close();
+		return false;
+	}
+
+	void Close()
+	{
+		if (m_port.is_open())
+		{
+			boost::system::error_code ec;
+			m_port.close(ec);
+		}
+	}
+
 private:
+	static std::string NormalizeSerialName(const std::string& serialName)
+	{
+#ifdef WIN32
+		return Win32SerialName(serialName);
+#else
+		return serialName;
+#endif
+	}
+
+#ifdef WIN32
+	static std::string Win32SerialName(const std::string serialName)
+	{
+		static std::string baseName = "COM";
+
+		if (serialName.substr(0, baseName.length()) != baseName)
+		{
+			return serialName;
+		}
+
+		const std::string numStr = serialName.substr(baseName.length());
+		size_t number = std::stoul(numStr);
+
+		if (std::to_string(number) != numStr)
+		{
+			return serialName;
+		}
+
+		if (number < 10)
+		{
+			return serialName;
+		}
+
+		return "\\\\.\\" + serialName;
+	}
+#endif
+
 	bool Setup()
 	{
 		using base = boost::asio::serial_port_base;
@@ -65,7 +137,6 @@ private:
 
 #ifdef WIN32
 		COMMTIMEOUTS timeouts = { 0 };
-
 		timeouts.ReadTotalTimeoutConstant = m_params.readTimeoutMs;
 		timeouts.WriteTotalTimeoutConstant = m_params.writeTimeoutMs;
 

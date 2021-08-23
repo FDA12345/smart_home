@@ -19,7 +19,9 @@ int main()
 	auto v5 = huawei_version();
 
 
-	auto serial = serial::Create({});
+	auto serial = serial::Create({"COM12"});
+	serial->Open();
+	serial->Close();
 
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
