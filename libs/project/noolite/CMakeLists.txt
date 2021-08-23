@@ -11,11 +11,13 @@ set(HEADERS
 	include/noolite.h
 	include/device_info.h
 	include/dongle.h
+	include/dongle_mode.h
 
 	src/stdafx.h
 	
-	src/include/cmd.h
-	src/include/control.h
+	src/noolite/cmd.h
+	src/noolite/control.h
+	src/noolite/answer.h
 )
 
 set(SOURCES

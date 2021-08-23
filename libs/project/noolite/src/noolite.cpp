@@ -1,7 +1,9 @@
 #include "noolite.h"
 
-#include "include/cmd.h"
-#include "include/control.h"
+#include "noolite/cmd.h"
+#include "noolite/control.h"
+#include "noolite/answer.h"
+#include "dongle_mode.h"
 
 /*
 	USB DONGLE MTRF64-USB

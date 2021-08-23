@@ -1,30 +1,32 @@
 #pragma once
 
-enum StateType : uint8_t
+#include "dongle_mode.h"
+
+enum class State : uint8_t
 {
-	STATE_OFF,
-	STATE_ON,
-	STATE_TEMPORARY_ON,
+	OFF,
+	ON,
+	TEMPORARY_ON,
 };
 
-enum BindType : uint8_t
+enum class BindMode : uint8_t
 {
-	BIND_DISABLED,
-	BIND_ENABLED,
+	DISABLED,
+	ENABLED,
 };
 
-enum RelayType : uint8_t
+enum class RelayMode : uint8_t
 {
-	RELAY_OPENED,
-	RELAY_CLOSED,
+	OPENED,
+	CLOSED,
 };
 
 struct DeviceInfo0 {
 	uint8_t deviceType = 0;
 	uint8_t firmware = 0;
 
-	StateType state = STATE_OFF;
-	BindType bindMode = BIND_DISABLED;
+	State state = State::OFF;
+	BindMode bindMode = BindMode::DISABLED;
 	uint8_t lightLevel = 0;
 };
 
@@ -32,7 +34,7 @@ struct DeviceInfo1 {
 	uint8_t deviceType = 0;
 	uint8_t firmware = 0;
 
-	RelayType relayMode = RELAY_OPENED;
+	RelayMode relayMode = RelayMode::OPENED;
 	bool DisabledTillReboot_Lite = false;
 	bool Disabled_Lite = false;
 };
@@ -56,20 +58,11 @@ struct DeviceInfo {
 	DeviceInfo2 Info2;
 };
 
-enum DongleModes : uint8_t
-{
-	MODE_TX,
-	MODE_RX,
-	MODE_F_TX,
-	MODE_F_RX,
-	MODE_F_SERVICE_RX,
-	MODE_F_BOOT,
-};
 
 //DongleDeviceConnection - device addressing in dongle
 struct DongleDeviceConnection {
 	//Mode
-	DongleModes mode = MODE_TX;
+	DongleMode mode = DongleMode::TX;
 
 	//Lite addressing info
 	uint8_t Channel = 0;
