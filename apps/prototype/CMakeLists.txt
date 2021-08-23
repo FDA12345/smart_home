@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_executable(prototype src/main.cpp)
 
-target_link_libraries(prototype PRIVATE paho-mqtt-c boost noolite modbus finglai_fths01 wirenboard huawei serial)
+target_link_libraries(prototype PRIVATE paho-mqtt-c boost noolite modbus finglai_fths01 wirenboard huawei serial logger)
 
 target_precompile_headers(prototype PRIVATE src/stdafx.h)
 
