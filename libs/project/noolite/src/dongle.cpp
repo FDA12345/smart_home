@@ -51,6 +51,12 @@ public:
 		m_serial->Write(&buf[0], buf.size());
 	}
 
+	void SwitchOn()
+	{
+	}
+
+private:
+
 private:
 	serial::Ptr m_serial;
 };
