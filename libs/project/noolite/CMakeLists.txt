@@ -13,6 +13,9 @@ set(HEADERS
 	include/dongle.h
 
 	src/stdafx.h
+	
+	src/include/cmd.h
+	src/include/control.h
 )
 
 set(SOURCES
