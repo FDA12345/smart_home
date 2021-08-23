@@ -8,7 +8,8 @@
 
 int main()
 {
-	auto log = logger::Create("prototype.log");
+	auto log = logger::Create();
+	auto log2 = logger::Create();
 	log->Info("app", "started");
 
 	serial::Params serialParams;
