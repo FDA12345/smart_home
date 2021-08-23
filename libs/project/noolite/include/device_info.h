@@ -65,7 +65,7 @@ struct DongleDeviceConnection {
 	DongleMode mode = DongleMode::TX;
 
 	//Lite addressing info
-	uint8_t Channel = 0;
+	uint8_t channel = 0;
 
 	//LiteF additional addressing info
 	bool useID = false;

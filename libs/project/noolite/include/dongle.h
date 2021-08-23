@@ -1,6 +1,7 @@
 #pragma once
 
 #include "serial.h"
+#include "device_info.h"
 
 namespace noolite
 {
@@ -17,14 +18,14 @@ public:
 	virtual void Stop() = 0;
 
 	//send init command to dongle
-	virtual bool Init() = 0;
+	virtual bool ForceInit() = 0;
 	//send reboot command to dongle
 	virtual bool Reboot() = 0;
 
 	//switch relay on
-	virtual bool SwitchOn() = 0;
+	virtual bool SwitchOn(const DongleDeviceConnection& conn) = 0;
 	//switch relay off
-	virtual bool SwitchOff() = 0;
+	virtual bool SwitchOff(const DongleDeviceConnection& conn) = 0;
 };
 
 using Ptr = std::unique_ptr<Dongle>;

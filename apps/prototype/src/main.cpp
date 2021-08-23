@@ -16,9 +16,12 @@ int main()
 	serialParams.characterSize = 8;
 
 	auto dongle = noolite::CreateDongle();
-	if (dongle && dongle->Start(serialParams) && dongle->Init())
+	if (dongle && dongle->Start(serialParams) && dongle->ForceInit())
 	{
-		dongle->SwitchOn();
+		DongleDeviceConnection devConn;
+		devConn.mode = DongleMode::F_TX;
+		devConn.channel = 5;
+		dongle->SwitchOn(devConn);
 	}
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
