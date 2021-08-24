@@ -59,7 +59,22 @@ public:
 
 	bool Reboot() override
 	{
-		return false;
+		DonglePacket p;
+
+		p.header = Header::ST_TO_ADAPTER;
+		p.mode = DongleMode::F_BOOT;
+		p.output.ctr = Control::B_CMD_RESET_OK;
+		p.footer = Footer::SP_TO_ADAPTER;
+
+		p.crc = CalcCrc(p);
+
+		if (m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) != sizeof(p))
+		{
+			return false;
+		}
+
+		WaitAnswer(p.mode, p);
+		return true;
 	}
 
 	bool ForceInit() override
