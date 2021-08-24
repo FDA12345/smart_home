@@ -59,95 +59,110 @@ public:
 
 	bool Reboot() override
 	{
-		DonglePacket p;
+		DonglePacket req;
 
-		p.header = Header::ST_TO_ADAPTER;
-		p.mode = DongleMode::F_BOOT;
-		p.output.ctr = Control::B_CMD_RESET_OK;
-		p.footer = Footer::SP_TO_ADAPTER;
+		req.header = Header::ST_TO_ADAPTER;
+		req.mode = DongleMode::F_BOOT;
+		req.output.ctr = Control::B_CMD_RESET_OK;
+		req.footer = Footer::SP_TO_ADAPTER;
+		req.crc = CalcCrc(req);
 
-		p.crc = CalcCrc(p);
-
-		if (m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) != sizeof(p))
+		return WaitRequest(req, [](const DonglePacket& rsp)
 		{
-			return false;
-		}
-
-		WaitAnswer(p.mode, p);
-		return true;
+			return true;
+		});
 	}
 
 	bool ForceInit() override
 	{
-		DonglePacket p;
+		DonglePacket req;
 
-		p.header = Header::ST_TO_ADAPTER;
-		p.mode = DongleMode::F_SERVICE_RX;
-		p.output.ctr = Control::SEND;
-		p.footer = Footer::SP_TO_ADAPTER;
+		req.header = Header::ST_TO_ADAPTER;
+		req.mode = DongleMode::F_SERVICE_RX;
+		req.output.ctr = Control::SEND;
+		req.footer = Footer::SP_TO_ADAPTER;
+		req.crc = CalcCrc(req);
 
-		p.crc = CalcCrc(p);
-
-		if (m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) != sizeof(p))
+		return WaitRequest(req, [](const DonglePacket& rsp)
 		{
-			return false;
-		}
-
-		WaitAnswer(p.mode, p);
-		return true;
+			return true;
+		});
 	}
 
 
 	bool SwitchOn(const DongleDeviceConnection& conn) override
 	{
-		DonglePacket p;
+		DonglePacket req;
 
-		p.header = Header::ST_TO_ADAPTER;
-		p.cmd = Cmd::ON;
-		p.output.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
-		p.footer = Footer::SP_TO_ADAPTER;
+		req.header = Header::ST_TO_ADAPTER;
+		req.cmd = Cmd::ON;
+		req.output.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
+		req.footer = Footer::SP_TO_ADAPTER;
 
-		PackDongleConnection(p, conn);
-		p.crc = CalcCrc(p);
+		PackDongleConnection(req, conn);
+		req.crc = CalcCrc(req);
 
-		if (m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) != sizeof(p))
+		return WaitRequest(req, [](const DonglePacket& rsp)
 		{
-			return false;
-		}
-
-		while (true)
-		{
-			WaitAnswer(p.mode, p);
-
-			if (conn.mode != DongleMode::F_TX)
-			{
-				break;
-			}
-
-			if (p.input.mode.F_TX.morePackets == 0)
-			{
-				break;
-			}
-		}
-		return true;
+			return true;
+		});
 	}
 
 	bool SwitchOff(const DongleDeviceConnection& conn) override
 	{
-		DonglePacket p;
+		DonglePacket req;
 
-		p.header = Header::ST_TO_ADAPTER;
-		p.cmd = Cmd::OFF;
-		p.output.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
-		p.footer = Footer::SP_TO_ADAPTER;
+		req.header = Header::ST_TO_ADAPTER;
+		req.cmd = Cmd::OFF;
+		req.output.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
+		req.footer = Footer::SP_TO_ADAPTER;
 
-		PackDongleConnection(p, conn);
-		p.crc = CalcCrc(p);
+		PackDongleConnection(req, conn);
+		req.crc = CalcCrc(req);
 
-		return m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) == sizeof(p);
+		return WaitRequest(req, [](const DonglePacket& rsp)
+		{
+			return true;
+		});
 	}
 
 private:
+	bool WaitRequest(const DonglePacket& req, std::function<bool(const DonglePacket& rsp)> rspFn)
+	{
+		if (m_serial->Write(reinterpret_cast<const char*>(&req), sizeof(req)) != sizeof(req))
+		{
+			return false;
+		}
+
+		bool invalidResponse = false;
+
+		while (true)
+		{
+			DonglePacket rsp;
+			if (!WaitResponse(req.mode, rsp))
+			{
+				return false;
+			}
+
+			if (!invalidResponse && !rspFn(rsp))
+			{
+				invalidResponse = true;
+			}
+
+			if ((rsp.mode != DongleMode::RX) && (rsp.mode != DongleMode::F_RX))
+			{
+				if (rsp.input.mode.otherMode.morePackets > 0)
+				{
+					continue;
+				}
+			}
+
+			break;
+		}
+
+		return !invalidResponse;
+	}
+
 	void DoSerialReading()
 	{
 		while (true)
@@ -171,7 +186,7 @@ private:
 	std::list<DonglePacket> m_incomePackets;
 	std::mutex m_mx;
 	std::condition_variable m_cv;
-	void WaitAnswer(const DongleMode& mode, DonglePacket& p)
+	bool WaitResponse(const DongleMode& mode, DonglePacket& p)
 	{
 		std::unique_lock lock(m_mx);
 		m_cv.wait(lock, [this, &mode, &p]()
@@ -190,6 +205,8 @@ private:
 
 			return false;
 		});
+
+		return true;
 	}
 
 	void PackDongleConnection(DonglePacket& p, const DongleDeviceConnection& conn)
@@ -215,6 +232,9 @@ private:
 private:
 	serial::Ptr m_serial;
 	std::thread m_threadRead;
+
+	using ParsePacketFn = std::function<bool(const DonglePacket& p)>;
+	std::list<ParsePacketFn> m_receivers;
 };
 
 Ptr CreateDongle()

@@ -36,7 +36,7 @@ struct DonglePacket
 				struct
 				{
 					uint8_t morePackets;
-				} F_TX;
+				} otherMode;
 
 				struct
 				{
