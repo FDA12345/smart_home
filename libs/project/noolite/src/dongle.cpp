@@ -68,10 +68,18 @@ public:
 		req.footer = Footer::SP_TO_ADAPTER;
 		req.crc = CalcCrc(req);
 
-		return WaitRequest(req, [](const DonglePacket& rsp)
+		bool ret = WaitRequest(req, [](const DonglePacket& rsp)
 		{
 			return true;
 		});
+
+		if (ret)
+		{
+			std::this_thread::sleep_for(std::chrono::seconds(5));
+			return ForceInit();
+		}
+
+		return false;
 	}
 
 	bool ForceInit() override
