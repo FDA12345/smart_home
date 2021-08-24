@@ -24,17 +24,20 @@ int main()
 	auto dongle = noolite::CreateDongle();
 	if (dongle && dongle->Start(serialParams) && dongle->ForceInit())
 	{
-		std::vector<noolite::ChannelInfo0> infos0;
-		if (dongle->ReadChannelInfo0(10, infos0))
+		for (int i = 0; i < 64; ++i)
 		{
-			std::vector<noolite::ChannelInfo1> infos1;
-
-			if (dongle->ReadChannelInfo1(10, infos1))
+			std::vector<noolite::ChannelInfo0> infos0;
+			if (dongle->ReadChannelInfo0(i, infos0))
 			{
-				std::vector<noolite::ChannelInfo2> infos2;
-				if (dongle->ReadChannelInfo2(10, infos2))
+				std::vector<noolite::ChannelInfo1> infos1;
+
+				if (dongle->ReadChannelInfo1(i, infos1))
 				{
-					int k = 0;
+					std::vector<noolite::ChannelInfo2> infos2;
+					if (dongle->ReadChannelInfo2(i, infos2))
+					{
+						int k = 0;
+					}
 				}
 			}
 		}
