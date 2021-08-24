@@ -150,7 +150,7 @@ public:
 			if (data[offset + i] == delim)
 			{
 				logTRACE("READ", BytesToHex(data, offset, i + 1));
-				return i;
+				return i + 1;
 			}
 		}
 

@@ -2,6 +2,8 @@
 #include "dongle.h"
 
 #include <thread>
+#include <mutex>
+#include <list>
 
 #include "noolite/header.h"
 #include "noolite/footer.h"
@@ -40,7 +42,44 @@ struct DonglePacket
 	uint8_t channel = 0;
 	Cmd cmd = Cmd::OFF;
 	uint8_t fmt = 0;
-	uint8_t d[4] = { 0 };
+
+	union
+	{
+		uint8_t d[4] = { 0 };
+
+		struct
+		{
+			uint8_t type;
+			uint8_t firmware;
+
+			uint8_t state : 4;
+			uint8_t reserv : 3;
+			bool binding : 1;
+
+			uint8_t light;
+		} fmt_0;
+
+		struct
+		{
+			uint8_t type;
+			uint8_t firmware;
+
+			bool inputClosed;
+
+			bool disabledLiteTillReboot : 1;
+			bool disabledLiteInSettings : 1;
+		} fmt_1;
+
+		struct
+		{
+			uint8_t type;
+			uint8_t firmware;
+
+			uint8_t freeCellsLite;
+			uint8_t freeCellsLiteF;
+		} fmt_2;
+	};
+
 	uint32_t id = 0;
 	uint8_t crc = 0;
 	Footer footer = Footer::SP_TO_ADAPTER;
@@ -74,8 +113,22 @@ public:
 			std::thread
 			{ [this]()
 			{
-				char data[uint8_t(Packet::PACKET_SIZE)];
-				m_serial->ReadUntil(data, sizeof(data), static_cast<char>(Footer::SP_FROM_ADAPTER));
+				while (true)
+				{
+					DonglePacket p;
+
+					size_t n = m_serial->ReadUntil(reinterpret_cast<char*>(&p), sizeof(p), static_cast<char>(Footer::SP_FROM_ADAPTER));
+					if (n == 0)
+					{
+						break;
+					}
+					if ((n == sizeof(p)) && (p.crc == CalcCrc(p)))
+					{
+						std::lock_guard lock(m_mx);
+						m_incomePackets.emplace_back(std::move(p));
+						m_cv.notify_one();
+					}
+				}
 			} }.detach();
 
 			return true;
@@ -110,7 +163,13 @@ public:
 
 		p.crc = CalcCrc(p);
 
-		return m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) == sizeof(p);
+		if (m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) != sizeof(p))
+		{
+			return false;
+		}
+
+		WaitAnswer(p.mode, p);
+		return true;
 	}
 
 
@@ -145,6 +204,30 @@ public:
 	}
 
 private:
+	std::list<DonglePacket> m_incomePackets;
+	std::mutex m_mx;
+	std::condition_variable m_cv;
+	void WaitAnswer(const DongleMode& mode, DonglePacket& p)
+	{
+		std::unique_lock lock(m_mx);
+		m_cv.wait(lock, [this, &mode, &p]()
+		{
+			for (auto it = m_incomePackets.begin(); it != m_incomePackets.end(); ++it)
+			{
+				if (it->mode != mode)
+				{
+					continue;
+				}
+
+				p = std::move(*it);
+				m_incomePackets.erase(it);
+				return true;
+			}
+
+			return false;
+		});
+	}
+
 	void PackDongleConnection(DonglePacket& p, const DongleDeviceConnection& conn)
 	{
 		p.mode = conn.mode;
