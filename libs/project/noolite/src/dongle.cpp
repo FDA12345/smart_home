@@ -207,7 +207,20 @@ public:
 			return false;
 		}
 
-		WaitAnswer(p.mode, p);
+		while (true)
+		{
+			WaitAnswer(p.mode, p);
+
+			if (conn.mode != DongleMode::F_TX)
+			{
+				break;
+			}
+
+			if (p.in.F_TX.morePackets == 0)
+			{
+				break;
+			}
+		}
 		return true;
 	}
 
