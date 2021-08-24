@@ -24,16 +24,19 @@ int main()
 	auto dongle = noolite::CreateDongle();
 	if (dongle && dongle->Start(serialParams) && dongle->ForceInit())
 	{
-		for (int k = 0; k < 3; ++k)
+		std::vector<noolite::ChannelInfo0> infos0;
+		if (dongle->ReadChannelInfo0(10, infos0))
 		{
-			DongleDeviceConnection devConn;
-			devConn.mode = DongleMode::F_TX;
-			devConn.channel = 10;
+			std::vector<noolite::ChannelInfo1> infos1;
 
-			dongle->SwitchOff(devConn);
-			std::this_thread::sleep_for(std::chrono::seconds(2));
-			dongle->SwitchOn(devConn);
-			std::this_thread::sleep_for(std::chrono::seconds(2));
+			if (dongle->ReadChannelInfo1(10, infos1))
+			{
+				std::vector<noolite::ChannelInfo2> infos2;
+				if (dongle->ReadChannelInfo2(10, infos2))
+				{
+					int k = 0;
+				}
+			}
 		}
 	}
 	dongle->Stop();

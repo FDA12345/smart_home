@@ -12,12 +12,12 @@ set(HEADERS
 	include/device_info.h
 	include/dongle.h
 	include/dongle_mode.h
+	include/answer.h
 
 	src/stdafx.h
 	
 	src/noolite/cmd.h
 	src/noolite/control.h
-	src/noolite/answer.h
 	src/noolite/packet.h
 	src/noolite/dongle_packet.h
 )

@@ -3,7 +3,7 @@
 #include "noolite/header.h"
 #include "noolite/footer.h"
 #include "noolite/control.h"
-#include "noolite/answer.h"
+#include "answer.h"
 #include "noolite/cmd.h"
 #include "noolite/packet.h"
 
@@ -66,7 +66,7 @@ struct DonglePacket
 
 			uint8_t state : 4;
 			uint8_t reserv : 3;
-			bool binding : 1;
+			uint8_t binding : 1;
 
 			uint8_t light;
 		} fmt_0;
@@ -76,7 +76,7 @@ struct DonglePacket
 			uint8_t type;
 			uint8_t firmware;
 
-			bool inputClosed;
+			uint8_t relayMode;
 
 			bool disabledLiteTillReboot : 1;
 			bool disabledLiteInSettings : 1;

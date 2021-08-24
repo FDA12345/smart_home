@@ -135,6 +135,134 @@ public:
 		});
 	}
 
+	bool ReadChannelInfo0(uint8_t channel, std::vector<ChannelInfo0>& infos0) override
+	{
+		DonglePacket req;
+
+		req.header = Header::ST_TO_ADAPTER;
+		req.cmd = Cmd::READ_STATE;
+		req.output.ctr = Control::SEND;
+		req.mode = DongleMode::F_TX;
+		req.channel = channel;
+		req.fmt = 0;
+		req.footer = Footer::SP_TO_ADAPTER;
+		req.crc = CalcCrc(req);
+
+		return WaitRequest(req, [&infos0](const DonglePacket& rsp)
+		{
+			if (rsp.fmt != 0)
+			{
+				return false;
+			}
+
+			Answer answer = rsp.input.answer;
+
+			DeviceInfo0 info0;
+			info0.deviceType = rsp.fmt_0.type;
+			info0.firmware = rsp.fmt_0.firmware;
+
+			switch (rsp.fmt_0.state)
+			{
+			case 0: info0.state = State::OFF; break;
+			case 1: info0.state = State::ON; break;
+			case 2: info0.state = State::TEMPORARY_ON; break;
+			default:
+				return false;
+			}
+
+			switch (rsp.fmt_0.binding)
+			{
+			case 0:	info0.bindMode = BindMode::DISABLED; break;
+			case 1:	info0.bindMode = BindMode::ENABLED; break;
+			default:
+				return false;
+			}
+
+			info0.lightLevel = rsp.fmt_0.light;
+
+			ChannelInfo0 c0{ std::move(info0), std::move(answer) };
+			infos0.emplace_back(std::move(c0));
+			return true;
+		});
+	}
+
+	bool ReadChannelInfo1(uint8_t channel, std::vector<ChannelInfo1>& infos1) override
+	{
+		DonglePacket req;
+
+		req.header = Header::ST_TO_ADAPTER;
+		req.cmd = Cmd::READ_STATE;
+		req.output.ctr = Control::SEND;
+		req.mode = DongleMode::F_TX;
+		req.channel = channel;
+		req.fmt = 1;
+		req.footer = Footer::SP_TO_ADAPTER;
+		req.crc = CalcCrc(req);
+
+		return WaitRequest(req, [&infos1](const DonglePacket& rsp)
+		{
+			if (rsp.fmt != 1)
+			{
+				return false;
+			}
+
+			Answer answer = rsp.input.answer;
+
+			DeviceInfo1 info1;
+			info1.deviceType = rsp.fmt_1.type;
+			info1.firmware = rsp.fmt_1.firmware;
+
+			switch (rsp.fmt_1.relayMode)
+			{
+			case 0: info1.relayMode = RelayMode::OPENED; break;
+			case 1: info1.relayMode = RelayMode::CLOSED; break;
+			default:
+				return false;
+			}
+
+			info1.DisabledTillReboot_Lite = rsp.fmt_1.disabledLiteTillReboot;
+			info1.Disabled_Lite = rsp.fmt_1.disabledLiteInSettings;
+
+			ChannelInfo1 c1{ std::move(info1), std::move(answer) };
+			infos1.emplace_back(std::move(c1));
+			return true;
+		});
+	}
+
+	bool ReadChannelInfo2(uint8_t channel, std::vector<ChannelInfo2>& infos2) override
+	{
+		DonglePacket req;
+
+		req.header = Header::ST_TO_ADAPTER;
+		req.cmd = Cmd::READ_STATE;
+		req.output.ctr = Control::SEND;
+		req.mode = DongleMode::F_TX;
+		req.channel = channel;
+		req.fmt = 2;
+		req.footer = Footer::SP_TO_ADAPTER;
+		req.crc = CalcCrc(req);
+
+		return WaitRequest(req, [&infos2](const DonglePacket& rsp)
+		{
+			if (rsp.fmt != 2)
+			{
+				return false;
+			}
+
+			Answer answer = rsp.input.answer;
+
+			DeviceInfo2 info2;
+			info2.deviceType = rsp.fmt_2.type;
+			info2.firmware = rsp.fmt_2.firmware;
+			info2.FreeBindCells_Lite = rsp.fmt_2.freeCellsLite;
+			info2.FreeBindCells_Lite_F = rsp.fmt_2.freeCellsLiteF;
+
+			ChannelInfo2 c2{ std::move(info2), std::move(answer) };
+			infos2.emplace_back(std::move(c2));
+			return true;
+		});
+	}
+
 private:
 	bool WaitRequest(const DonglePacket& req, std::function<bool(const DonglePacket& rsp)> rspFn)
 	{
