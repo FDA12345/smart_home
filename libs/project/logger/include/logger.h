@@ -34,13 +34,13 @@ public:
 };
 
 
-enum LogLevel
+enum class LogLevel
 {
-	INFO,
-	WARN,
-	ERROR,
-	DEBUG,
-	TRACE,
+	Info,
+	Warn,
+	Error,
+	Debug,
+	Trace,
 };
 void SetLogLevel(const LogLevel& logLevel);
 LogLevel GetLogLevel();

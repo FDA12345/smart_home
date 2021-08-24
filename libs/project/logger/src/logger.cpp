@@ -4,6 +4,12 @@
 #include <mutex>
 #include <atomic>
 #include <iostream>
+#include <iomanip>
+
+#ifdef WIN32
+	//#include <processthreadsapi.h>
+	#include <windows.h>
+#endif
 
 namespace logger
 {
@@ -14,7 +20,7 @@ std::mutex g_mx;
 
 using LogLevelAtomic = std::atomic<LogLevel>;
 using LogLevelPtr = std::shared_ptr<LogLevelAtomic>;
-LogLevelPtr g_defaultLogLevel = std::make_shared<LogLevelAtomic>(ERROR);
+LogLevelPtr g_defaultLogLevel = std::make_shared<LogLevelAtomic>(LogLevel::Error);
 
 std::map<std::string, Ptr> g_loggers;
 
@@ -38,7 +44,7 @@ public:
 
 	void Warn(const std::string& name, const std::string& msg) override
 	{
-		if (m_logLevelAtomic >= WARN)
+		if (m_logLevelAtomic >= LogLevel::Warn)
 		{
 			Out("WARN", name, msg);
 		}
@@ -46,7 +52,7 @@ public:
 
 	void Error(const std::string& name, const std::string& msg) override
 	{
-		if (m_logLevelAtomic >= ERROR)
+		if (m_logLevelAtomic >= LogLevel::Error)
 		{
 			Out("ERROR", name, msg);
 		}
@@ -54,7 +60,7 @@ public:
 
 	void Debug(const std::string& name, const std::string& msg) override
 	{
-		if (m_logLevelAtomic >= DEBUG)
+		if (m_logLevelAtomic >= LogLevel::Debug)
 		{
 			Out("DEBUG", name, msg);
 		}
@@ -62,7 +68,7 @@ public:
 
 	void Trace(const std::string& name, const std::string& msg) override
 	{
-		if (m_logLevelAtomic >= TRACE)
+		if (m_logLevelAtomic >= LogLevel::Trace)
 		{
 			Out("TRACE", name, msg);
 		}
@@ -93,8 +99,15 @@ public:
 		char micros_txt[10];
 		sprintf(micros_txt, "%06llu", micros);
 
+		uint64_t pid = 0;
+#ifdef WIN32
+		pid = GetCurrentProcessId();
+#else
+		pid = ::getpid();
+#endif
+
 		std::stringstream ss;
-		ss << "[" << buffer << "." << micros_txt << "]\t" << level << "\t" << name << " - " << msg;
+		ss << "[" << buffer << "." << micros_txt << "]\t" << std::hex << std::setw(8) << pid << "\t" << std::this_thread::get_id() << "\t" << level << "\t" << name << " - " << msg;
 
 		const std::string& resultMsg = ss.str();
 

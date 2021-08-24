@@ -8,7 +8,7 @@
 
 int main()
 {
-	logger::SetLogLevel(logger::TRACE);
+	logger::SetLogLevel(logger::LogLevel::Trace);
 
 	auto m_log = logger::Create();
 	logINFO("app", "started");
@@ -29,6 +29,7 @@ int main()
 		devConn.channel = 10;
 		dongle->SwitchOn(devConn);
 	}
+	dongle->Stop();
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
 	auto server = net_server::broker::CreateServer(std::move(broker));

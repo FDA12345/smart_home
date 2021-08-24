@@ -4,6 +4,7 @@
 #include <thread>
 #include <mutex>
 #include <list>
+#include <map>
 
 #include "noolite/dongle_packet.h"
 
@@ -30,26 +31,11 @@ public:
 				break;
 			}
 
-			std::thread
+			m_threadRead = std::thread
 			{ [this]()
 			{
-				while (true)
-				{
-					DonglePacket p;
-
-					size_t n = m_serial->ReadUntil(reinterpret_cast<char*>(&p), sizeof(p), static_cast<char>(Footer::SP_FROM_ADAPTER));
-					if (n == 0)
-					{
-						break;
-					}
-					if ((n == sizeof(p)) && (p.crc == CalcCrc(p)))
-					{
-						std::lock_guard lock(m_mx);
-						m_incomePackets.emplace_back(std::move(p));
-						m_cv.notify_one();
-					}
-				}
-			} }.detach();
+				DoSerialReading();
+			} };
 
 			return true;
 		}
@@ -60,11 +46,15 @@ public:
 
 	void Stop() override
 	{
-		if (m_serial)
+		if (m_threadRead.joinable())
 		{
 			m_serial->Close();
-			m_serial.reset();
+			m_threadRead.join();
+
+			m_threadRead = std::thread();
 		}
+
+		m_serial.reset();
 	}
 
 	bool Reboot() override
@@ -143,6 +133,26 @@ public:
 	}
 
 private:
+	void DoSerialReading()
+	{
+		while (true)
+		{
+			DonglePacket p;
+
+			size_t n = m_serial->ReadUntil(reinterpret_cast<char*>(&p), sizeof(p), static_cast<char>(Footer::SP_FROM_ADAPTER));
+			if (n == 0)
+			{
+				break;
+			}
+			if ((n == sizeof(p)) && (p.crc == CalcCrc(p)))
+			{
+				std::lock_guard lock(m_mx);
+				m_incomePackets.emplace_back(std::move(p));
+				m_cv.notify_one();
+			}
+		}
+	}
+
 	std::list<DonglePacket> m_incomePackets;
 	std::mutex m_mx;
 	std::condition_variable m_cv;
@@ -189,6 +199,7 @@ private:
 
 private:
 	serial::Ptr m_serial;
+	std::thread m_threadRead;
 };
 
 Ptr CreateDongle()
