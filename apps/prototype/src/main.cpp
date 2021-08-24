@@ -27,7 +27,7 @@ int main()
 		DongleDeviceConnection devConn;
 		devConn.mode = DongleMode::F_TX;
 		devConn.channel = 10;
-		//dongle->SwitchOn(devConn);
+		dongle->SwitchOn(devConn);
 	}
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");

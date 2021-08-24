@@ -35,7 +35,24 @@ struct DonglePacket
 		struct
 		{
 			Answer answer;
-			uint8_t togl;
+
+			union
+			{
+				struct
+				{
+					uint8_t morePackets;
+				} F_TX;
+
+				struct
+				{
+					uint8_t packetIndex;
+				} RX;
+
+				struct
+				{
+					uint8_t packetIndex;
+				} F_RX;
+			};
 		} in;
 	};
 
@@ -185,7 +202,13 @@ public:
 		PackDongleConnection(p, conn);
 		p.crc = CalcCrc(p);
 
-		return m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) == sizeof(p);
+		if (m_serial->Write(reinterpret_cast<char*>(&p), sizeof(p)) != sizeof(p))
+		{
+			return false;
+		}
+
+		WaitAnswer(p.mode, p);
+		return true;
 	}
 
 	bool SwitchOff(const DongleDeviceConnection& conn) override
