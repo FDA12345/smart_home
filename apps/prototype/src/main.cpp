@@ -14,9 +14,9 @@ int main()
 	serial::Params serialParams;
 	serialParams.serialName = "COM6";
 	serialParams.baudRate = 9600;
-	serialParams.stopBits = serial::STOPBITS_1_0;
-	serialParams.parity = serial::PARITY_NONE;
-	serialParams.flowControl = serial::FLOW_CONTROL_NONE;
+	serialParams.stopBits = serial::StopBits::_1_0;
+	serialParams.parity = serial::Parity::NONE;
+	serialParams.flowControl = serial::FlowControl::NONE;
 	serialParams.characterSize = 8;
 
 	auto dongle = noolite::CreateDongle();

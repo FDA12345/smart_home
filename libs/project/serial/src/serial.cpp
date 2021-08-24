@@ -48,7 +48,13 @@ public:
 		{
 			boost::system::error_code ec;
 
-			m_port.open(NormalizeSerialName(m_params.serialName), ec);
+			const std::string& normalSerialName = NormalizeSerialName(m_params.serialName);
+			if (normalSerialName != m_params.serialName)
+			{
+				logWARN(__FUNCTION__, "port name modified from '" << m_params.serialName  << "' to '" << normalSerialName << "'");
+			}
+
+			m_port.open(normalSerialName, ec);
 			if (ec)
 			{
 				logERROR(__FUNCTION__, "port " << m_params.serialName << " open error " << ec.message());
@@ -166,9 +172,9 @@ private:
 
 		switch (m_params.flowControl)
 		{
-		case FLOW_CONTROL_NONE: m_port.set_option(base::flow_control(base::flow_control::none), ec); break;
-		case FLOW_CONTROL_SOFTWARE: m_port.set_option(base::flow_control(base::flow_control::software), ec); break;
-		case FLOW_CONTROL_HARDWARE: m_port.set_option(base::flow_control(base::flow_control::hardware), ec); break;
+		case FlowControl::NONE: m_port.set_option(base::flow_control(base::flow_control::none), ec); break;
+		case FlowControl::SOFTWARE: m_port.set_option(base::flow_control(base::flow_control::software), ec); break;
+		case FlowControl::HARDWARE: m_port.set_option(base::flow_control(base::flow_control::hardware), ec); break;
 		default:
 			return false;
 		}
@@ -179,18 +185,18 @@ private:
 
 		switch (m_params.parity)
 		{
-		case PARITY_NONE: m_port.set_option(base::parity(base::parity::none), ec); break;
-		case PARITY_ODD: m_port.set_option(base::parity(base::parity::odd), ec); break;
-		case PARITY_EVEN: m_port.set_option(base::parity(base::parity::even), ec); break;
+		case Parity::NONE: m_port.set_option(base::parity(base::parity::none), ec); break;
+		case Parity::ODD: m_port.set_option(base::parity(base::parity::odd), ec); break;
+		case Parity::EVEN: m_port.set_option(base::parity(base::parity::even), ec); break;
 		default:
 			return false;
 		}
 
 		switch (m_params.stopBits)
 		{
-		case STOPBITS_1_0: m_port.set_option(base::stop_bits(base::stop_bits::one), ec); break;
-		case STOPBITS_1_5: m_port.set_option(base::stop_bits(base::stop_bits::onepointfive), ec); break;
-		case STOPBITS_2_0: m_port.set_option(base::stop_bits(base::stop_bits::two), ec); break;
+		case StopBits::_1_0: m_port.set_option(base::stop_bits(base::stop_bits::one), ec); break;
+		case StopBits::_1_5: m_port.set_option(base::stop_bits(base::stop_bits::onepointfive), ec); break;
+		case StopBits::_2_0: m_port.set_option(base::stop_bits(base::stop_bits::two), ec); break;
 		default:
 			return false;
 		}
