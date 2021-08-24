@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_library(noolite src/dongle.cpp)
 
-target_link_libraries(noolite PUBLIC serial)
+target_link_libraries(noolite PUBLIC serial PRIVATE logger)
 target_include_directories(noolite PUBLIC include)
 
 target_precompile_headers(noolite PRIVATE src/stdafx.h)

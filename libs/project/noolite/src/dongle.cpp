@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "dongle.h"
+#include "logger.h"
 
 #include <thread>
 #include <mutex>
@@ -178,47 +179,70 @@ private:
 
 			if ((n == sizeof(p)) && (p.crc == CalcCrc(p)))
 			{
-				std::lock_guard lock(m_mx);
-				m_incomePackets.emplace_back(std::move(p));
-				m_cv.notify_one();
+				{
+					std::unique_lock lock(m_incomeMx);
+
+					//if m_incomeWaiting than wait for packet dispatching
+					if (m_incomeWaiting)
+					{
+						m_incomeWaiting = false;
+						m_incomeReceived = false;
+						m_incomePacket = p;
+
+						m_incomeCv.notify_one();
+						m_incomeCv.wait(lock, [this]()
+						{
+							return m_incomeReceived;
+						});
+					}
+				}
+
+				FireOnPacketIncome(p);
 			}
 		}
 	}
 
-	std::list<DonglePacket> m_incomePackets;
-	std::mutex m_mx;
-	std::condition_variable m_cv;
+	void FireOnPacketIncome(const DonglePacket& p)
+	{
+		std::list<ParsePacketFn> receivers;
+
+		{
+			std::lock_guard lock(m_incomeMx);
+			receivers.splice(receivers.begin(), m_receivers);
+		}
+
+		for (const auto& recvFn : receivers)
+		{
+			recvFn(p);
+		}
+	}
+
 	bool WaitResponse(const DongleMode& mode, DonglePacket& p)
 	{
-		std::unique_lock lock(m_mx);
-		m_cv.wait(lock, [this, &mode, &p]()
+		std::unique_lock lock(m_incomeMx);
+
+		m_incomeWaiting = true;
+		m_incomeCv.wait(lock, [this, &mode, &p]()
 		{
-			for (auto it = m_incomePackets.begin(); it != m_incomePackets.end(); ++it)
-			{
-				if (it->mode != mode)
-				{
-					continue;
-				}
-
-				p = std::move(*it);
-				m_incomePackets.erase(it);
-				return true;
-			}
-
-			return false;
+			return !m_incomeWaiting && (m_incomePacket.mode == mode);
 		});
+
+		p = m_incomePacket;
+
+		m_incomeReceived = true;
+		m_incomeCv.notify_one();
 
 		return true;
 	}
 
-	void PackDongleConnection(DonglePacket& p, const DongleDeviceConnection& conn)
+	static void PackDongleConnection(DonglePacket& p, const DongleDeviceConnection& conn)
 	{
 		p.mode = conn.mode;
 		p.channel = conn.channel;
 		p.id = conn.id;
 	}
 
-	uint8_t CalcCrc(const DonglePacket& p)
+	static uint8_t CalcCrc(const DonglePacket& p)
 	{
 		uint32_t sum = 0;
 		const char* buffer = reinterpret_cast<const char*>(&p);
@@ -232,8 +256,16 @@ private:
 	}
 
 private:
+	logger::Ptr m_log = logger::Create();
 	serial::Ptr m_serial;
 	std::thread m_threadRead;
+
+	bool m_incomeWaiting = false;
+	bool m_incomeReceived = false;
+	DonglePacket m_incomePacket;
+
+	std::mutex m_incomeMx;
+	std::condition_variable m_incomeCv;
 
 	using ParsePacketFn = std::function<bool(const DonglePacket& p)>;
 	std::list<ParsePacketFn> m_receivers;
