@@ -2,6 +2,7 @@
 
 #include "MqttBroker.h"
 #include "BrokerNetServer.h"
+#include "HttpNetServer.h"
 
 #include "noolite.h"
 #include "logger.h"
@@ -24,7 +25,7 @@ int main()
 	auto dongle = noolite::CreateDongle();
 	if (dongle && dongle->Start(serialParams) && dongle->ForceInit())
 	{
-		for (int i = 0; i < 64; ++i)
+		for (int i = 0;false && i < 64; ++i)
 		{
 			std::vector<noolite::ChannelInfo0> infos0;
 			if (dongle->ReadChannelInfo0(i, infos0))
@@ -44,11 +45,13 @@ int main()
 	}
 	dongle->Stop();
 
-	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
-	auto server = net_server::broker::CreateServer(std::move(broker));
+	//auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
+	//auto server = net_server::broker::CreateServer(std::move(broker));
 
-	//server->RouteAdd("fda/servers", [](const net_server::Request& req, net_server::Response& rsp)
-	server->RouteAdd("$SYS/broker/version", [](const net_server::Request& req, net_server::Response& rsp)
+	auto server = net_server::http::CreateServer();
+
+	server->RouteAdd("fda/servers", [](const net_server::Request& req, net_server::Response& rsp)
+	//server->RouteAdd("$SYS/broker/version", [](const net_server::Request& req, net_server::Response& rsp)
 	{
 		std::cout << std::string(req.Payload()) << std::endl;
 		return false;
