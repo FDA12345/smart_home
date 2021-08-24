@@ -8,6 +8,8 @@
 
 int main()
 {
+	logger::SetLogLevel(logger::DEBUG);
+
 	auto m_log = logger::Create();
 	logINFO("app", "started");
 
@@ -25,7 +27,7 @@ int main()
 		DongleDeviceConnection devConn;
 		devConn.mode = DongleMode::F_TX;
 		devConn.channel = 5;
-		dongle->SwitchOn(devConn);
+		//dongle->SwitchOn(devConn);
 	}
 
 	auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");

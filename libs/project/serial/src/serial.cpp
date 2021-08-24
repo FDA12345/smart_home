@@ -2,6 +2,7 @@
 #include "serial.h"
 #include "logger.h"
 
+#include <iomanip>
 #include <boost/asio.hpp>
 
 namespace serial
@@ -88,6 +89,8 @@ public:
 
 	size_t Write(const char* data, size_t offset, size_t count) override
 	{
+		logDEBUG(__FUNCTION__, BytesToHex(data, offset, count));
+
 		boost::system::error_code ec;
 		return boost::asio::write(m_port, boost::asio::const_buffer(data + offset, count), ec);
 	}
@@ -117,6 +120,18 @@ public:
 	}
 
 private:
+	static std::string BytesToHex(const char* data, size_t offset, size_t count)
+	{
+		std::stringstream ss;
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			ss << std::setw(2) << std::setfill('0') << std::uppercase << std::hex << (0xFF & *(data + offset + i)) << " ";
+		}
+
+		return ss.str();
+	}
+
 	static std::string NormalizeSerialName(const std::string& serialName)
 	{
 #ifdef WIN32
