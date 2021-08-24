@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "serial.h"
+#include "logger.h"
 
 #include <boost/asio.hpp>
 
@@ -40,6 +41,7 @@ public:
 
 	bool Open() override
 	{
+		logINFO(__FUNCTION__, "open " << m_params.serialName << " port");
 		Close();
 
 		while (true)
@@ -49,14 +51,17 @@ public:
 			m_port.open(NormalizeSerialName(m_params.serialName), ec);
 			if (ec)
 			{
+				logERROR(__FUNCTION__, "port " << m_params.serialName << " open error " << ec.message());
 				break;
 			}
 
 			if (!Setup())
 			{
+				logERROR(__FUNCTION__, "port " << m_params.serialName << " setup failed");
 				break;
 			}
 
+			logINFO(__FUNCTION__, "port " << m_params.serialName << " opened");
 			return true;
 		}
 
@@ -68,8 +73,10 @@ public:
 	{
 		if (m_port.is_open())
 		{
+			logINFO(__FUNCTION__, "close port");
 			boost::system::error_code ec;
 			m_port.close(ec);
+			logINFO(__FUNCTION__, "port closed");
 		}
 	}
 
@@ -203,6 +210,7 @@ private:
 
 private:
 	const Params m_params;
+	const logger::Ptr m_log = logger::Create();
 
 	boost::asio::io_service m_io;
 	boost::asio::serial_port m_port;

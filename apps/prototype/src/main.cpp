@@ -8,9 +8,8 @@
 
 int main()
 {
-	auto log = logger::Create();
-	auto log2 = logger::Create();
-	log->Info("app", "started");
+	auto m_log = logger::Create();
+	logINFO("app", "started");
 
 	serial::Params serialParams;
 	serialParams.serialName = "COM6";

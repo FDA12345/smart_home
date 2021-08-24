@@ -1,54 +1,73 @@
 #include "logger.h"
 
-#include <sstream>
 #include <map>
 #include <mutex>
+#include <atomic>
+#include <iostream>
 
 namespace logger
 {
 
+std::string g_defaultLogFileName = "system.log";
+
 std::mutex g_mx;
+
+using LogLevelAtomic = std::atomic<LogLevel>;
+using LogLevelPtr = std::shared_ptr<LogLevelAtomic>;
+LogLevelPtr g_defaultLogLevel = std::make_shared<LogLevelAtomic>(ERROR);
+
 std::map<std::string, Ptr> g_loggers;
-
-
-
-void Logger::Info(const std::string& name, const std::string& msg)
-{
-	Out("INFO", name, msg);
-}
-
-void Logger::Warn(const std::string& name, const std::string& msg)
-{
-	Out("WARN", name, msg);
-}
-
-void Logger::Debug(const std::string& name, const std::string& msg)
-{
-	Out("DEBUG", name, msg);
-}
-
-void Logger::Error(const std::string& name, const std::string& msg)
-{
-	Out("ERROR", name, msg);
-}
-
-void Logger::Trace(const std::string& name, const std::string& msg)
-{
-	Out("TRACE", name, msg);
-}
 
 
 
 class LoggerImpl : public Logger
 {
 public:
-	LoggerImpl(bool console, const std::string& fileName)
-		: m_console(console)
+	LoggerImpl(const LogLevelPtr& logLevel, bool console, const std::string& fileName)
+		: m_logLevelPtr(logLevel)
+		, m_logLevelAtomic(*m_logLevelPtr)
+		, m_console(console)
 		, m_fileName(fileName)
 	{
 	}
 
-private:
+	void Info(const std::string& name, const std::string& msg) override
+	{
+		Out("INFO", name, msg);
+	}
+
+	void Warn(const std::string& name, const std::string& msg) override
+	{
+		if (m_logLevelAtomic >= WARN)
+		{
+			Out("WARN", name, msg);
+		}
+	}
+
+	void Error(const std::string& name, const std::string& msg) override
+	{
+		if (m_logLevelAtomic >= ERROR)
+		{
+			Out("ERROR", name, msg);
+		}
+	}
+
+	void Debug(const std::string& name, const std::string& msg) override
+	{
+		if (m_logLevelAtomic >= DEBUG)
+		{
+			Out("DEBUG", name, msg);
+		}
+	}
+
+	void Trace(const std::string& name, const std::string& msg) override
+	{
+		if (m_logLevelAtomic >= TRACE)
+		{
+			Out("TRACE", name, msg);
+		}
+	}
+
 	void Out(const std::string& level, const std::string& name, const std::string& msg) override
 	{
 		std::lock_guard lock(m_mx);
@@ -75,13 +94,23 @@ private:
 		sprintf(micros_txt, "%06llu", micros);
 
 		std::stringstream ss;
-		ss << "[" << buffer << "." << micros_txt << "] - " << level << " - " << name << " - " << msg << std::endl;
+		ss << "[" << buffer << "." << micros_txt << "]\t" << level << "\t" << name << " - " << msg;
 
-		fprintf(f, "%s\n", ss.str().c_str());
+		const std::string& resultMsg = ss.str();
+
+		fprintf(f, "%s\n", resultMsg.c_str());
 		fclose(f);
+
+		if (m_console)
+		{
+			std::cout << resultMsg << std::endl;
+		}
 	}
 
 private:
+	const LogLevelPtr m_logLevelPtr;
+	const LogLevelAtomic& m_logLevelAtomic;
+
 	const bool m_console;
 	const std::string m_fileName;
 
@@ -90,7 +119,19 @@ private:
 
 
 
-Ptr Create(const std::string& fileName)
+void SetLogLevel(const LogLevel& logLevel)
+{
+	(*g_defaultLogLevel) = logLevel;
+}
+
+LogLevel GetLogLevel()
+{
+	return *g_defaultLogLevel;
+}
+
+
+
+Ptr Create(const LogLevelPtr& logLevelPtr, const std::string& fileName)
 {
 	std::lock_guard lock(g_mx);
 
@@ -100,12 +141,34 @@ Ptr Create(const std::string& fileName)
 		return it->second;
 	}
 
-	return g_loggers.emplace(fileName, std::make_shared<LoggerImpl>(true, fileName)).first->second;
+	return g_loggers.emplace(fileName, std::make_shared<LoggerImpl>(logLevelPtr, true, fileName)).first->second;
+}
+
+Ptr Create(const LogLevelPtr& logLevelPtr)
+{
+	return Create(logLevelPtr, g_defaultLogFileName);
+}
+
+
+
+Ptr Create(const LogLevel& logLevel, const std::string& fileName)
+{
+	return Create(std::make_shared<LogLevelAtomic>(logLevel), fileName);
+}
+
+Ptr Create(const LogLevel& logLevel)
+{
+	return Create(std::make_shared<LogLevelAtomic>(logLevel));
+}
+
+Ptr Create(const std::string& fileName)
+{
+	return Create(g_defaultLogLevel, fileName);
 }
 
 Ptr Create()
 {
-	return Create("system.log");
+	return Create(g_defaultLogLevel, g_defaultLogFileName);
 }
 
 };//namespace logger
