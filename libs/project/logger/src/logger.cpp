@@ -107,7 +107,8 @@ public:
 #endif
 
 		std::stringstream ss;
-		ss << "[" << buffer << "." << micros_txt << "]\t" << std::hex << std::setw(8) << pid << "\t" << std::this_thread::get_id() << "\t" << level << "\t" << name << " - " << msg;
+		ss << "[" << buffer << "." << micros_txt << "] " << std::hex << std::setw(sizeof(uintptr_t)* 2) << std::setfill('0') << pid << " " <<
+			std::setw(8) << std::setfill('0') << std::this_thread::get_id() << " " << level << " " << name << " - " << msg;
 
 		const std::string& resultMsg = ss.str();
 
