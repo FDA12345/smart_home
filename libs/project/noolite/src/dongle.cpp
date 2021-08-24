@@ -170,10 +170,12 @@ private:
 			DonglePacket p;
 
 			size_t n = m_serial->ReadUntil(reinterpret_cast<char*>(&p), sizeof(p), static_cast<char>(Footer::SP_FROM_ADAPTER));
+
 			if (n == 0)
 			{
 				break;
 			}
+
 			if ((n == sizeof(p)) && (p.crc == CalcCrc(p)))
 			{
 				std::lock_guard lock(m_mx);
