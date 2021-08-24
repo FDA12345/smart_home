@@ -44,6 +44,7 @@ namespace serial
 		virtual size_t Read(char* data, size_t offset, size_t count) = 0;
 		virtual void ReadAsync(char* data, size_t offset, size_t count, OnReadFn onReadFn) = 0;
 
+		virtual size_t ReadUntil(char* data, size_t offset, size_t count, const char delim) = 0;
 
 	public:
 		size_t Write(const char* data, size_t count);
@@ -51,6 +52,7 @@ namespace serial
 
 		size_t Read(char* data, size_t count);
 		void ReadAsync(char* data, size_t count, OnReadFn onReadFn);
+		size_t ReadUntil(char* data, size_t count, const char delim);
 	};
 
 	struct Params
@@ -64,7 +66,7 @@ namespace serial
 		size_t characterSize = 8;
 
 #ifdef WIN32
-		size_t readTimeoutMs = 500;
+		size_t readTimeoutMs = 100;
 		size_t writeTimeoutMs = 100;
 #endif
 	};

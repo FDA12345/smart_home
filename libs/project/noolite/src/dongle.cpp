@@ -1,22 +1,42 @@
 #include "stdafx.h"
 #include "dongle.h"
 
+#include <thread>
+
 #include "noolite/header.h"
 #include "noolite/footer.h"
 #include "noolite/control.h"
 #include "noolite/answer.h"
 #include "noolite/cmd.h"
 #include "noolite/packet.h"
+
 #pragma pack(push)
 #pragma pack(1)
 struct DonglePacket
 {
+	DonglePacket()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
 	Header header = Header::ST_FROM_ADAPTER;
 	DongleMode mode = DongleMode::TX;
-	Control ctr = Control::SEND;
-	Answer answer = Answer::OK;
-	uint8_t reserv = 0;
-	uint8_t togl = 0;
+
+	union
+	{
+		struct
+		{
+			Control ctr;
+			uint8_t reserv;
+		} out;
+
+		struct
+		{
+			Answer answer;
+			uint8_t togl;
+		} in;
+	};
+
 	uint8_t channel = 0;
 	Cmd cmd = Cmd::OFF;
 	uint8_t fmt = 0;
@@ -51,6 +71,12 @@ public:
 				break;
 			}
 
+			std::thread
+			{ [this]()
+			{
+				char data[uint8_t(Packet::PACKET_SIZE)];
+				m_serial->ReadUntil(data, sizeof(data), static_cast<char>(Footer::SP_FROM_ADAPTER));
+			} }.detach();
 
 			return true;
 		}
@@ -79,7 +105,7 @@ public:
 
 		p.header = Header::ST_TO_ADAPTER;
 		p.mode = DongleMode::F_SERVICE_RX;
-		p.ctr = Control::SEND;
+		p.out.ctr = Control::SEND;
 		p.footer = Footer::SP_TO_ADAPTER;
 
 		p.crc = CalcCrc(p);
@@ -94,7 +120,7 @@ public:
 
 		p.header = Header::ST_TO_ADAPTER;
 		p.cmd = Cmd::ON;
-		p.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
+		p.out.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
 		p.footer = Footer::SP_TO_ADAPTER;
 
 		PackDongleConnection(p, conn);
@@ -109,7 +135,7 @@ public:
 
 		p.header = Header::ST_TO_ADAPTER;
 		p.cmd = Cmd::OFF;
-		p.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
+		p.out.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
 		p.footer = Footer::SP_TO_ADAPTER;
 
 		PackDongleConnection(p, conn);

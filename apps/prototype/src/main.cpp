@@ -8,7 +8,7 @@
 
 int main()
 {
-	logger::SetLogLevel(logger::DEBUG);
+	logger::SetLogLevel(logger::TRACE);
 
 	auto m_log = logger::Create();
 	logINFO("app", "started");
@@ -26,7 +26,7 @@ int main()
 	{
 		DongleDeviceConnection devConn;
 		devConn.mode = DongleMode::F_TX;
-		devConn.channel = 5;
+		devConn.channel = 10;
 		//dongle->SwitchOn(devConn);
 	}
 

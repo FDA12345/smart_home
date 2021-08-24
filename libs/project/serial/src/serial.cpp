@@ -4,6 +4,7 @@
 
 #include <iomanip>
 #include <boost/asio.hpp>
+#include <thread>
 
 namespace serial
 {
@@ -28,6 +29,11 @@ void Serial::ReadAsync(char* data, size_t count, OnReadFn onReadFn)
 	ReadAsync(data, 0, count, onReadFn);
 }
 
+size_t Serial::ReadUntil(char* data, size_t count, const char delim)
+{
+	return ReadUntil(data, 0, count, delim);
+}
+
 
 
 
@@ -36,8 +42,20 @@ class SerialImpl : public Serial
 public:
 	SerialImpl(const Params& params)
 		: m_params(params)
+		, m_work(std::make_unique<boost::asio::io_service::work>(m_io))
 		, m_port(m_io)
 	{
+		m_threadIo = std::thread
+		{ [this]()
+		{
+			m_io.run();
+		} };
+	}
+
+	~SerialImpl()
+	{
+		m_work.reset();
+		m_threadIo.join();
 	}
 
 	bool Open() override
@@ -89,7 +107,7 @@ public:
 
 	size_t Write(const char* data, size_t offset, size_t count) override
 	{
-		logDEBUG(__FUNCTION__, BytesToHex(data, offset, count));
+		logTRACE("WRITE", BytesToHex(data, offset, count));
 
 		boost::system::error_code ec;
 		return boost::asio::write(m_port, boost::asio::const_buffer(data + offset, count), ec);
@@ -117,6 +135,27 @@ public:
 		{
 			onReadFn(ec ? true : false, transferred);
 		});
+	}
+
+	size_t ReadUntil(char* data, size_t offset, size_t count, const char delim)
+	{
+		for (size_t i = 0; i < count; ++i)
+		{
+			size_t n = Read(data, offset + i, 1);
+			if (n == 0)
+			{
+				return 0;
+			}
+
+			if (data[offset + i] == delim)
+			{
+				logTRACE("READ", BytesToHex(data, offset, i + 1));
+				return i;
+			}
+		}
+
+		logTRACE("READ", BytesToHex(data, offset, count));
+		return count;
 	}
 
 private:
@@ -234,6 +273,8 @@ private:
 	const logger::Ptr m_log = logger::Create();
 
 	boost::asio::io_service m_io;
+	std::thread m_threadIo;
+	std::unique_ptr<boost::asio::io_service::work> m_work;
 	boost::asio::serial_port m_port;
 };
 
