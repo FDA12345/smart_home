@@ -19,6 +19,7 @@ set(HEADERS
 	src/noolite/control.h
 	src/noolite/answer.h
 	src/noolite/packet.h
+	src/noolite/dongle_packet.h
 )
 
 set(SOURCES

@@ -5,104 +5,7 @@
 #include <mutex>
 #include <list>
 
-#include "noolite/header.h"
-#include "noolite/footer.h"
-#include "noolite/control.h"
-#include "noolite/answer.h"
-#include "noolite/cmd.h"
-#include "noolite/packet.h"
-
-#pragma pack(push)
-#pragma pack(1)
-struct DonglePacket
-{
-	DonglePacket()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-
-	Header header = Header::ST_FROM_ADAPTER;
-	DongleMode mode = DongleMode::TX;
-
-	union
-	{
-		struct
-		{
-			Control ctr;
-			uint8_t reserv;
-		} out;
-
-		struct
-		{
-			Answer answer;
-
-			union
-			{
-				struct
-				{
-					uint8_t morePackets;
-				} F_TX;
-
-				struct
-				{
-					uint8_t packetIndex;
-				} RX;
-
-				struct
-				{
-					uint8_t packetIndex;
-				} F_RX;
-			};
-		} in;
-	};
-
-	uint8_t channel = 0;
-	Cmd cmd = Cmd::OFF;
-	uint8_t fmt = 0;
-
-	union
-	{
-		uint8_t d[4] = { 0 };
-
-		struct
-		{
-			uint8_t type;
-			uint8_t firmware;
-
-			uint8_t state : 4;
-			uint8_t reserv : 3;
-			bool binding : 1;
-
-			uint8_t light;
-		} fmt_0;
-
-		struct
-		{
-			uint8_t type;
-			uint8_t firmware;
-
-			bool inputClosed;
-
-			bool disabledLiteTillReboot : 1;
-			bool disabledLiteInSettings : 1;
-		} fmt_1;
-
-		struct
-		{
-			uint8_t type;
-			uint8_t firmware;
-
-			uint8_t freeCellsLite;
-			uint8_t freeCellsLiteF;
-		} fmt_2;
-	};
-
-	uint32_t id = 0;
-	uint8_t crc = 0;
-	Footer footer = Footer::SP_TO_ADAPTER;
-};
-#pragma pack(pop)
-
+#include "noolite/dongle_packet.h"
 
 namespace noolite
 {
@@ -175,7 +78,7 @@ public:
 
 		p.header = Header::ST_TO_ADAPTER;
 		p.mode = DongleMode::F_SERVICE_RX;
-		p.out.ctr = Control::SEND;
+		p.output.ctr = Control::SEND;
 		p.footer = Footer::SP_TO_ADAPTER;
 
 		p.crc = CalcCrc(p);
@@ -196,7 +99,7 @@ public:
 
 		p.header = Header::ST_TO_ADAPTER;
 		p.cmd = Cmd::ON;
-		p.out.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
+		p.output.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
 		p.footer = Footer::SP_TO_ADAPTER;
 
 		PackDongleConnection(p, conn);
@@ -216,7 +119,7 @@ public:
 				break;
 			}
 
-			if (p.in.F_TX.morePackets == 0)
+			if (p.input.mode.F_TX.morePackets == 0)
 			{
 				break;
 			}
@@ -230,7 +133,7 @@ public:
 
 		p.header = Header::ST_TO_ADAPTER;
 		p.cmd = Cmd::OFF;
-		p.out.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
+		p.output.ctr = conn.useID ? Control::SEND_TO_NOOLITE_F_ADDRESS : Control::SEND;
 		p.footer = Footer::SP_TO_ADAPTER;
 
 		PackDongleConnection(p, conn);
