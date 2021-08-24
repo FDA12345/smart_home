@@ -7,7 +7,6 @@
 #include <iomanip>
 
 #ifdef WIN32
-	//#include <processthreadsapi.h>
 	#include <windows.h>
 #endif
 
@@ -107,7 +106,7 @@ public:
 #endif
 
 		std::stringstream ss;
-		ss << "[" << buffer << "." << micros_txt << "] " << std::hex << std::setw(sizeof(uintptr_t)* 2) << std::setfill('0') << pid << " " <<
+		ss << "[" << buffer << "." << micros_txt << "] " << std::hex << std::setw(sizeof(uintptr_t) * 2) << std::setfill('0') << pid << " " <<
 			std::setw(8) << std::setfill('0') << std::this_thread::get_id() << " " << level << " " << name << " - " << msg;
 
 		const std::string& resultMsg = ss.str();
