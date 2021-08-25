@@ -36,16 +36,30 @@ public:
 	{
 	}
 
+	~LoggerImpl()
+	{
+		if (m_file)
+		{
+			fclose(m_file);
+			m_file = nullptr;
+		}
+	}
+
+	LogLevel Level() const override
+	{
+		return m_logLevelAtomic;
+	}
+
 	void Info(const std::string& name, const std::string& msg) override
 	{
-		Out("INFO", name, msg);
+		Out(LogLevel::Info, name, msg);
 	}
 
 	void Warn(const std::string& name, const std::string& msg) override
 	{
 		if (m_logLevelAtomic >= LogLevel::Warn)
 		{
-			Out("WARN", name, msg);
+			Out(LogLevel::Warn, name, msg);
 		}
 	}
 
@@ -53,7 +67,7 @@ public:
 	{
 		if (m_logLevelAtomic >= LogLevel::Error)
 		{
-			Out("ERROR", name, msg);
+			Out(LogLevel::Error, name, msg);
 		}
 	}
 
@@ -61,7 +75,7 @@ public:
 	{
 		if (m_logLevelAtomic >= LogLevel::Debug)
 		{
-			Out("DEBUG", name, msg);
+			Out(LogLevel::Debug, name, msg);
 		}
 	}
 
@@ -69,16 +83,20 @@ public:
 	{
 		if (m_logLevelAtomic >= LogLevel::Trace)
 		{
-			Out("TRACE", name, msg);
+			Out(LogLevel::Trace, name, msg);
 		}
 	}
 
-	void Out(const std::string& level, const std::string& name, const std::string& msg) override
+	void Out(const LogLevel level, const std::string& name, const std::string& msg) override
 	{
 		std::lock_guard lock(m_mx);
 
-		FILE *f = fopen(m_fileName.c_str(), "a+");
-		if (!f)
+		if (!m_file)
+		{
+			m_file = fopen(m_fileName.c_str(), "a+");
+		}
+
+		if (!m_file)
 		{
 			return;
 		}
@@ -107,16 +125,30 @@ public:
 
 		std::stringstream ss;
 		ss << buffer << "." << micros_txt << " " << std::hex << std::setw(sizeof(uintptr_t) * 2) << std::setfill('0') << pid << " " <<
-			std::setw(8) << std::setfill('0') << std::this_thread::get_id() << " " << level << " " << name << " - " << msg;
+			std::setw(8) << std::setfill('0') << std::this_thread::get_id() << " " << LevelToStr(level) << " " << name << " - " << msg;
 
 		const std::string& resultMsg = ss.str();
 
-		fprintf(f, "%s\n", resultMsg.c_str());
-		fclose(f);
+		fprintf(m_file, "%s\n", resultMsg.c_str());
+		fflush(m_file);
 
 		if (m_console)
 		{
 			std::cout << resultMsg << std::endl;
+		}
+	}
+
+private:
+	static std::string LevelToStr(const LogLevel level)
+	{
+		switch (level)
+		{
+		case LogLevel::Info:  return "INFO";
+		case LogLevel::Warn:  return "WARN";
+		case LogLevel::Error: return "ERROR";
+		case LogLevel::Debug: return "DEBUG";
+		case LogLevel::Trace: return "TRACE";
+		default: return "UNKNOWN(" + std::to_string(uint32_t(level)) + ")";
 		}
 	}
 
@@ -128,6 +160,7 @@ private:
 	const std::string m_fileName;
 
 	std::mutex m_mx;
+	FILE* m_file = nullptr;
 };
 
 

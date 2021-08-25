@@ -13,8 +13,9 @@ using tcp = boost::asio::ip::tcp;
 class HttpServer : public net_server::Server
 {
 public:
-	HttpServer()
-		: m_acceptor(m_io)//, tcp::endpoint(tcp::v4(), 9898))
+	HttpServer(const Params& params)
+		: m_params(params)
+		, m_acceptor(m_io)//, tcp::endpoint(tcp::v4(), 9898))
 	{
 	}
 
@@ -44,13 +45,14 @@ public:
 	}
 
 private:
+	const Params m_params;
 	const logger::Ptr m_log = logger::Create();
 
 	boost::asio::io_service m_io;
 	boost::asio::ip::tcp::acceptor m_acceptor;
 };
 
-Ptr net_server::http::CreateServer()
+Ptr net_server::http::CreateServer(const Params& params)
 {
-	return std::make_unique<HttpServer>();
+	return std::make_unique<HttpServer>(params);
 }

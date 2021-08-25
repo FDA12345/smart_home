@@ -4,17 +4,34 @@
 #include <sstream>
 #include <memory>
 
+namespace logger
+{
+	enum class LogLevel
+	{
+		Info,
+		Warn,
+		Error,
+		Debug,
+		Trace,
+	};
+};//namespace logger
+
+
 #define logOUT(level, name, msg) {\
-	std::stringstream ss; \
-	ss << msg; \
-	m_log->Out(level, name, ss.str()); \
+	if (m_log->Level() >= level) \
+	{\
+		std::stringstream ss; \
+		ss << msg; \
+		m_log->Out(level, name, ss.str()); \
+	}\
 }
 
-#define logINFO(name, msg)  logOUT("INFO", name, msg)
-#define logWARN(name, msg)  logOUT("WARN", name, msg)
-#define logERROR(name, msg) logOUT("ERROR", name, msg)
-#define logDEBUG(name, msg) logOUT("DEBUG", name, msg)
-#define logTRACE(name, msg) logOUT("TRACE", name, msg)
+#define logINFO(name, msg)  logOUT(logger::LogLevel::Info, name, msg)
+#define logWARN(name, msg)  logOUT(logger::LogLevel::Warn, name, msg)
+#define logERROR(name, msg) logOUT(logger::LogLevel::Error, name, msg)
+#define logDEBUG(name, msg) logOUT(logger::LogLevel::Debug, name, msg)
+#define logTRACE(name, msg) logOUT(logger::LogLevel::Trace, name, msg)
+
 
 namespace logger
 {
@@ -24,24 +41,18 @@ class Logger
 public:
 	virtual ~Logger() = default;
 
+	virtual LogLevel Level() const = 0;
+
 	virtual void Info(const std::string& name, const std::string& msg) = 0;
 	virtual void Warn(const std::string& name, const std::string& msg) = 0;
 	virtual void Error(const std::string& name, const std::string& msg) = 0;
 	virtual void Debug(const std::string& name, const std::string& msg) = 0;
 	virtual void Trace(const std::string& name, const std::string& msg) = 0;
 
-	virtual void Out(const std::string& level, const std::string& name, const std::string& msg) = 0;
+	virtual void Out(const LogLevel level, const std::string& name, const std::string& msg) = 0;
 };
 
 
-enum class LogLevel
-{
-	Info,
-	Warn,
-	Error,
-	Debug,
-	Trace,
-};
 void SetLogLevel(const LogLevel& logLevel);
 LogLevel GetLogLevel();
 

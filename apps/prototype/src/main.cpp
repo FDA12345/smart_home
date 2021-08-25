@@ -48,7 +48,7 @@ int main()
 	//auto broker = broker::mqtt::Create("tcp://mqtt.eclipseprojects.io:1883", "supervisor");
 	//auto server = net_server::broker::CreateServer(std::move(broker));
 
-	auto server = net_server::http::CreateServer();
+	auto server = net_server::http::CreateServer({"", 9898});
 
 	server->RouteAdd("fda/servers", [](const net_server::Request& req, net_server::Response& rsp)
 	//server->RouteAdd("$SYS/broker/version", [](const net_server::Request& req, net_server::Response& rsp)
