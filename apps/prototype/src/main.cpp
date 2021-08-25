@@ -64,7 +64,7 @@ int main()
 
 	server->Start();
 
-	std::this_thread::sleep_for(std::chrono::seconds(15));
+	std::this_thread::sleep_for(std::chrono::seconds(150));
 
 	server->Stop();
 	server.reset();
