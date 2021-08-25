@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include <functional>
-
 /*
 Base net server aka web server request response
 */
