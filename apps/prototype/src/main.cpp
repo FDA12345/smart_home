@@ -1,8 +1,8 @@
 #include <iostream>
 
 #include "MqttBroker.h"
-#include "BrokerNetServer.h"
-#include "HttpNetServer.h"
+#include "broker_server.h"
+#include "http_server.h"
 
 #include "noolite.h"
 #include "logger.h"
