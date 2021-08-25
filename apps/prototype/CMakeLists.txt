@@ -2,13 +2,11 @@ cmake_minimum_required(VERSION 3.10)
 
 add_executable(prototype src/main.cpp)
 
-target_link_libraries(prototype PRIVATE noolite paho-mqtt-c boost logger)
+target_link_libraries(prototype PRIVATE noolite paho-mqtt-c boost logger broker net_server)
 
 target_precompile_headers(prototype PRIVATE src/stdafx.h)
 
 set(HEADERS
-	src/common/Broker.h
-	src/common/NetServer.h
 
 	src/stdafx.h
 	src/MqttBroker.h

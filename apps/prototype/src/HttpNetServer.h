@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/NetServer.h"
+#include "net_server.h"
 
 namespace net_server
 {

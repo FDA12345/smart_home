@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/NetServer.h"
-#include "common/Broker.h"
+#include "net_server.h"
+#include "broker.h"
 
 namespace net_server
 {
