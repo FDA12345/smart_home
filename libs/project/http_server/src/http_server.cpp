@@ -88,6 +88,10 @@ private:
 	{
 	}
 
+	void WriteResponse()
+	{
+	}
+
 private:
 	const logger::Ptr m_log = logger::Create();
 	boost::beast::tcp_stream m_stream;
