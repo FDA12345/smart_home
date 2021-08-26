@@ -82,40 +82,42 @@ private:
 		const auto& method = req.method();
 		const auto& resource = req.target().to_string();
 
-		PrepareResponse(req, CreateResponse("text/html", "route path not found"), beast_http::status::not_found);
+		auto rsp = PrepareResponse(req, CreateResponse("text/html", "route path not found"), beast_http::status::not_found);
 	}
 
 	template <typename Request, typename Response>
-	void PrepareResponse(const Request& req, Response& rsp, const beast_http::status status)
+	Response PrepareResponse(const Request& req, Response&& rsp, const beast_http::status status)
 	{
-		rsp.set(beast_http::field::server, m_params->serverName);
+		rsp->set(beast_http::field::server, m_params->serverName);
 
-		rsp.result(status);
-		rsp.version(req.version());
-		rsp.keep_alive(req.keep_alive());
-	}
-
-	static beast_http::message<false, beast_http::string_body> CreateResponse(const std::string& contentType, const std::string_view& body)
-	{
-		auto rsp = CreateResponseImpl<beast_http::string_body>();
-
-		rsp.set(beast_http::field::content_type, contentType);
-
-		rsp.body() = body;
-		rsp.prepare_payload();
+		rsp->result(status);
+		rsp->version(req.version());
+		rsp->keep_alive(req.keep_alive());
 
 		return std::move(rsp);
 	}
 
-	static beast_http::message<false, beast_http::empty_body> CreateResponse()
+	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponse(const std::string& contentType, const std::string_view& body)
+	{
+		auto rsp = CreateResponseImpl<beast_http::string_body>();
+
+		rsp->set(beast_http::field::content_type, contentType);
+
+		rsp->body() = body;
+		rsp->prepare_payload();
+
+		return std::move(rsp);
+	}
+
+	static std::unique_ptr<beast_http::message<false, beast_http::empty_body>> CreateResponse()
 	{
 		return CreateResponseImpl<beast_http::empty_body>();
 	}
 
 	template <typename BodyType>
-	static beast_http::message<false, BodyType> CreateResponseImpl()
+	static std::unique_ptr<beast_http::message<false, BodyType>> CreateResponseImpl()
 	{
-		return beast_http::message<false, BodyType>();
+		return std::make_unique<beast_http::message<false, BodyType>>();
 	}
 
 private:
