@@ -42,7 +42,7 @@ private:
 	void OnHeaders(const boost::system::error_code& ec, std::size_t bytes_transferred)
 	{
 		logINFO(__FUNCTION__, "on headers, bytes_transferred " << bytes_transferred);
-		if (ec == beast_http::error::end_of_stream)
+		if (ec == beast_http::error::end_of_stream || (bytes_transferred == 0))
 		{
 			Close();
 			return;
