@@ -111,6 +111,8 @@ private:
 
 		auto session = HttpSession::Create(m_params, std::move(peer));
 		session->ReadHeader();
+
+		StartAccept();
 	}
 
 private:

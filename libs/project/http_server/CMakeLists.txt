@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.10)
 
 add_library(http_server src/http_server.cpp)
 
+#boost 1.73 inlining error in msvc 2017, so disabling one
+if(WIN32)
+	target_compile_options(http_server PRIVATE -Ob0)
+endif()
+
 target_link_libraries(http_server
 	PUBLIC net_server
 	PRIVATE boost logger
