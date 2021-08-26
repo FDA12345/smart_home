@@ -5,7 +5,7 @@ class HttpServer : public net_server::Server
 public:
 	HttpServer(const Params& params)
 		: m_params(std::make_shared<Params>(params))
-		, m_acceptor(m_io)
+		, m_acceptor(boost::beast::net::make_strand(m_io))
 	{
 	}
 
@@ -98,10 +98,11 @@ public:
 private:
 	void StartAccept()
 	{
-		m_acceptor.async_accept(std::bind(&HttpServer::OnAccept, this, std::placeholders::_1, std::placeholders::_2));// // async_accept();
+		m_acceptor.async_accept(boost::beast::net::make_strand(m_io),
+			std::bind(&HttpServer::OnAccept, this, std::placeholders::_1, std::placeholders::_2));// // async_accept();
 	}
 
-	void OnAccept(const boost::system::error_code& ec, tcp::socket& peer)
+	void OnAccept(const boost::system::error_code& ec, tcp::socket peer)
 	{
 		if (ec)
 		{

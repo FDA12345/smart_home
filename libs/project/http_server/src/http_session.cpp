@@ -25,14 +25,24 @@ public:
 
 	void ReadHeader()
 	{
+		logINFO(__FUNCTION__, "read header");
 		m_stream.expires_after(std::chrono::seconds(30));
 
 		beast_http::async_read_header(m_stream, m_buf, m_parser, std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 	}
 
 private:
+	void OnReadHeader()
+	{
+		logINFO(__FUNCTION__, "on read header");
+		m_stream.expires_after(std::chrono::seconds(30));
+
+		beast_http::async_read_header(m_stream, m_buf, m_parser, std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+	}
+
 	void OnHeaders(const boost::system::error_code& ec, std::size_t bytes_transferred)
 	{
+		logINFO(__FUNCTION__, "on header");
 		if (ec == beast_http::error::end_of_stream)
 		{
 			Close();
@@ -50,6 +60,7 @@ private:
 
 	void ParseHeaders()
 	{
+		logINFO(__FUNCTION__, "parse header");
 		/*
 		const auto& req = m_parser.get();
 		const auto& method = req.method();
@@ -61,17 +72,21 @@ private:
 
 	void Close()
 	{
+		logINFO(__FUNCTION__, "close");
+
 		boost::beast::error_code ec;
 		m_stream.socket().shutdown(tcp::socket::shutdown_send, ec);
 	}
 
 	void ReadBody()
 	{
+		logINFO(__FUNCTION__, "read body");
 		beast_http::async_read_some(m_stream, m_buf, m_parser, std::bind(&HttpSessionImpl::OnBody, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 	}
 
 	void OnBody(const boost::system::error_code& ec, std::size_t bytes_transferred)
 	{
+		logINFO(__FUNCTION__, "on body");
 		if (ec == beast_http::error::end_of_stream)
 		{
 			Close();
@@ -89,6 +104,7 @@ private:
 
 	void ParseBody()
 	{
+		logINFO(__FUNCTION__, "parse body");
 		const auto& req = m_parser.get();
 		const auto& method = req.method();
 		const auto& resource = req.target().to_string();
@@ -101,6 +117,7 @@ private:
 	template <typename Response>
 	void WriteResponse(Response&& rsp)
 	{
+		logINFO(__FUNCTION__, "write response");
 		using type = std::remove_reference_t<decltype(rsp)>;
 		std::shared_ptr<type::element_type> sharedRsp = std::move(rsp);
 
@@ -111,6 +128,7 @@ private:
 	template <typename Response>
 	void OnWrite(const Response& rsp, const boost::system::error_code& ec, size_t transferred)
 	{
+		logINFO(__FUNCTION__, "on write");
 		if (ec)
 		{
 			logERROR(__FUNCTION__, "write error " << ec.message());
@@ -123,7 +141,7 @@ private:
 			return;
 		}
 
-		ReadHeader();
+		OnReadHeader();
 	}
 
 	template <typename Request, typename Response>
