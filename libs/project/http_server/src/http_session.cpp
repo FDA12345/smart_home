@@ -26,13 +26,12 @@ public:
 	void ReadHeader()
 	{
 		logINFO(__FUNCTION__, "read header");
-		m_stream.expires_after(std::chrono::seconds(30));
-
-		beast_http::async_read_header(m_stream, m_buf, m_parser, std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+		boost::beast::net::dispatch(m_stream.get_executor(),
+			std::bind(&HttpSessionImpl::OnReadHeaders, shared_from_this()));
 	}
 
 private:
-	void OnReadHeader()
+	void OnReadHeaders()
 	{
 		logINFO(__FUNCTION__, "on read header");
 		m_stream.expires_after(std::chrono::seconds(30));
@@ -61,11 +60,12 @@ private:
 	void ParseHeaders()
 	{
 		logINFO(__FUNCTION__, "parse header");
-		/*
+
 		const auto& req = m_parser.get();
 		const auto& method = req.method();
 		const auto& resource = req.target().to_string();
-		*/
+
+		logINFO(__FUNCTION__, "resource " << resource << ", method " << method);
 
 		ReadBody();
 	}
@@ -141,7 +141,7 @@ private:
 			return;
 		}
 
-		OnReadHeader();
+		OnReadHeaders();
 	}
 
 	template <typename Request, typename Response>
