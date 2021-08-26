@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-namespace beast_http = boost::beast::http;
-
 class HttpSessionImpl
 	: public HttpSession
 	, private std::enable_shared_from_this<HttpSessionImpl>
