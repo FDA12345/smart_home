@@ -41,7 +41,7 @@ private:
 
 	void OnHeaders(const boost::system::error_code& ec, std::size_t bytes_transferred)
 	{
-		logINFO(__FUNCTION__, "on header");
+		logINFO(__FUNCTION__, "on headers, bytes_transferred " << bytes_transferred);
 		if (ec == beast_http::error::end_of_stream)
 		{
 			Close();
@@ -50,7 +50,7 @@ private:
 
 		if (ec)
 		{
-			logERROR(__FUNCTION__, "read header error " << ec.message());
+			logERROR(__FUNCTION__, "read headers error " << ec.message());
 			return;
 		}
 
@@ -152,7 +152,6 @@ private:
 		rsp->result(status);
 		rsp->version(req.version());
 		rsp->keep_alive(req.keep_alive());
-		rsp->content_length(rsp->body().size());
 
 		return std::move(rsp);
 	}
@@ -165,6 +164,7 @@ private:
 
 		rsp->body() = body;
 		rsp->prepare_payload();
+		rsp->content_length(rsp->body().size());
 
 		return std::move(rsp);
 	}
