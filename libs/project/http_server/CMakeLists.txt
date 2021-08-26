@@ -15,10 +15,12 @@ set(HEADERS
 	include/http_server.h
 
 	src/stdafx.h
+	src/http_session.h
 )
 
 set(SOURCES
 	src/http_server.cpp
+	src/http_session.cpp
 )
 
 target_sources(http_server PRIVATE ${HEADERS} ${SOURCES})

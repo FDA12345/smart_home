@@ -10,6 +10,9 @@ namespace net_server
 		{
 			std::string address; //empty for tcp_v4 on all network interfaces
 			uint16_t port = 0;
+
+			std::string serverName;
+			size_t threadsCount = 1;
 		};
 
 
