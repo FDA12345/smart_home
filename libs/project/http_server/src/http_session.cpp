@@ -36,13 +36,14 @@ private:
 		logINFO(__FUNCTION__, "on read header");
 		m_stream.expires_after(std::chrono::seconds(30));
 
-		beast_http::async_read_header(m_stream, m_buf, m_parser, std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+		m_parser = std::make_unique<beast_http::request_parser<beast_http::string_body>>();
+		beast_http::async_read_header(m_stream, m_buf, *m_parser, std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 	}
 
 	void OnHeaders(const boost::system::error_code& ec, std::size_t bytes_transferred)
 	{
 		logINFO(__FUNCTION__, "on headers, bytes_transferred " << bytes_transferred);
-		if (ec == beast_http::error::end_of_stream || (bytes_transferred == 0))
+		if (ec == beast_http::error::end_of_stream)
 		{
 			Close();
 			return;
@@ -50,7 +51,13 @@ private:
 
 		if (ec)
 		{
-			logERROR(__FUNCTION__, "read headers error " << ec.message());
+			logERROR(__FUNCTION__, "read headers error - " << ec.message());
+			return;
+		}
+
+		if (bytes_transferred == 0)
+		{
+			logERROR(__FUNCTION__, "read headers error - bytes_transferred == 0");
 			return;
 		}
 
@@ -61,7 +68,7 @@ private:
 	{
 		logINFO(__FUNCTION__, "parse header");
 
-		const auto& req = m_parser.get();
+		const auto& req = m_parser->get();
 		const auto& method = req.method();
 		const auto& resource = req.target().to_string();
 
@@ -81,7 +88,7 @@ private:
 	void ReadBody()
 	{
 		logINFO(__FUNCTION__, "read body");
-		beast_http::async_read_some(m_stream, m_buf, m_parser, std::bind(&HttpSessionImpl::OnBody, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+		beast_http::async_read_some(m_stream, m_buf, *m_parser, std::bind(&HttpSessionImpl::OnBody, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 	}
 
 	void OnBody(const boost::system::error_code& ec, std::size_t bytes_transferred)
@@ -105,7 +112,7 @@ private:
 	void ParseBody()
 	{
 		logINFO(__FUNCTION__, "parse body");
-		const auto& req = m_parser.get();
+		const auto& req = m_parser->get();
 		const auto& method = req.method();
 		const auto& resource = req.target().to_string();
 
@@ -145,11 +152,11 @@ private:
 	}
 
 	template <typename Request, typename Response>
-	Response PrepareResponse(const Request& req, Response&& rsp, const beast_http::status status)
+	Response PrepareResponse(const Request& req, Response&& rsp, const beast_http::status result)
 	{
 		rsp->set(beast_http::field::server, m_params->serverName);
 
-		rsp->result(status);
+		rsp->result(result);
 		rsp->version(req.version());
 		rsp->keep_alive(req.keep_alive());
 
@@ -186,7 +193,7 @@ private:
 	const std::shared_ptr<Params> m_params;
 	boost::beast::tcp_stream m_stream;
 
-	beast_http::request_parser<beast_http::string_body> m_parser;
+	std::unique_ptr<beast_http::request_parser<beast_http::string_body>> m_parser;
 	boost::beast::flat_buffer m_buf;
 };
 
