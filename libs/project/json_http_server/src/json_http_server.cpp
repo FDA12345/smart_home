@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "json_http_server.h"
 
+#include "rapidjson/document.h"
+
 class JsonHttpServer : public net_server::Server
 {
 public:
