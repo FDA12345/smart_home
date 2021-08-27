@@ -9,7 +9,7 @@ public:
 	{
 	}
 
-	bool RouteAdd(const std::string& routePath, const RouteFn& routeFn) override
+	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
 	{
 		return false;
 	}

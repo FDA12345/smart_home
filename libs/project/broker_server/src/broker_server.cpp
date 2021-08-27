@@ -121,7 +121,7 @@ public:
 	}
 
 
-	bool RouteAdd(const std::string& routePath, const RouteFn& routeFn) override
+	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
 	{
 		const std::string& req = GetRequestRouteTopic(routePath);
 		const std::string& rsp = GetResponseRouteTopic(routePath);

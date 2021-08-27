@@ -47,7 +47,7 @@ public:
 	virtual ~Server() = default;
 
 	//add route - path to resource, routeFn - async callback on route
-	virtual bool RouteAdd(const std::string& routePath, const RouteFn& routeFn) = 0;
+	virtual bool RouteAdd(const std::string& routePath, RouteFn routeFn) = 0;
 	//remove route - path to resource
 	virtual bool RouteRemove(const std::string& routePath) = 0;
 
