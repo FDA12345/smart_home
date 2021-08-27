@@ -33,7 +33,9 @@ private:
 		logINFO(__FUNCTION__, "on read header");
 		m_stream.expires_after(std::chrono::seconds(30));
 
+		//for new request we resetting parser aka new operation
 		m_parser = std::make_unique<beast_http::request_parser<beast_http::string_body>>();
+
 		beast_http::async_read_header(m_stream, m_buf, *m_parser, std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 	}
 
