@@ -1,8 +1,5 @@
 #include "stdafx.h"
 
-//#include <boost/beast/core.hpp>
-#include <boost/bind/bind.hpp>
-
 class HttpSessionImpl
 	: public HttpSession
 	, public std::enable_shared_from_this<HttpSessionImpl>
@@ -23,7 +20,7 @@ public:
 		logINFO(__FUNCTION__, "d_tor");
 	}
 
-	void ReadHeader()
+	void Run()
 	{
 		logINFO(__FUNCTION__, "read header");
 		boost::beast::net::dispatch(m_stream.get_executor(),

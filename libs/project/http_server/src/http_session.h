@@ -9,5 +9,5 @@ public:
 public:
 	virtual ~HttpSession() = default;
 
-	virtual void ReadHeader() = 0;
+	virtual void Run() = 0;
 };
