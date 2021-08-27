@@ -8,8 +8,9 @@ public:
 	using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-	HttpSessionImpl(const std::shared_ptr<Params>& params, tcp::socket&& peer)
-		: m_params(params)
+	HttpSessionImpl(RequestFn requestFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
+		: m_requestFn(requestFn)
+		, m_params(params)
 		, m_stream(std::move(peer))
 	{
 		logINFO(__FUNCTION__, "c_tor");
@@ -22,7 +23,6 @@ public:
 
 	void Run()
 	{
-		logINFO(__FUNCTION__, "read header");
 		boost::beast::net::dispatch(m_stream.get_executor(),
 			std::bind(&HttpSessionImpl::OnReadHeaders, shared_from_this()));
 	}
@@ -30,7 +30,6 @@ public:
 private:
 	void OnReadHeaders()
 	{
-		logINFO(__FUNCTION__, "on read header");
 		m_stream.expires_after(std::chrono::seconds(30));
 
 		//for new request we resetting parser aka new operation
@@ -41,7 +40,6 @@ private:
 
 	void OnHeaders(const boost::system::error_code& ec, std::size_t bytes_transferred)
 	{
-		logINFO(__FUNCTION__, "on headers, bytes_transferred " << bytes_transferred);
 		if (ec == beast_http::error::end_of_stream)
 		{
 			Close();
@@ -65,14 +63,6 @@ private:
 
 	void ParseHeaders()
 	{
-		logINFO(__FUNCTION__, "parse header");
-
-		const auto& req = m_parser->get();
-		const auto& method = req.method();
-		const auto& resource = req.target().to_string();
-
-		logINFO(__FUNCTION__, "resource " << resource << ", method " << method);
-
 		ReadBody();
 	}
 
@@ -111,13 +101,31 @@ private:
 	void ParseBody()
 	{
 		logINFO(__FUNCTION__, "parse body");
-		const auto& req = m_parser->get();
-		const auto& method = req.method();
-		const auto& resource = req.target().to_string();
 
-		static int counter = 0;
-		WriteResponse(PrepareResponse(req, CreateResponse("text/html", "route path not found - " + std::to_string(++counter)), beast_http::status::not_found));
-		//WriteResponse(PrepareResponse(req, CreateResponse(), beast_http::status::not_found));
+		const auto& req = m_parser->get();
+
+		SessionRequest sessReq;
+		sessReq.version = req.version();
+		sessReq.method = req.method_string().to_string();
+		sessReq.resource = req.target().to_string();
+		sessReq.body = req.body();
+
+		for (const auto& f : req)
+		{
+			sessReq.headers.emplace_back(std::make_pair(f.name_string(), f.value().to_string()));
+		}
+
+		SessionResponse sessRsp;
+		m_requestFn(sessReq, sessRsp);
+
+		if (sessRsp.body.empty())
+		{
+			WriteResponse(PrepareResponse(req, CreateResponse(sessRsp.headers), sessRsp.result));
+		}
+		else
+		{
+			WriteResponse(PrepareResponse(req, CreateResponse(sessRsp.headers, sessRsp.body), sessRsp.result));
+		}
 	}
 
 	template <typename Response>
@@ -162,11 +170,11 @@ private:
 		return std::move(rsp);
 	}
 
-	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponse(const std::string& contentType, const std::string_view& body)
+	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponse(const std::vector<std::pair<std::string, std::string>>& headers, const std::string_view& body)
 	{
-		auto rsp = CreateResponseImpl<beast_http::string_body>();
+		auto rsp = CreateResponseImpl<beast_http::string_body>(headers);
 
-		rsp->set(beast_http::field::content_type, contentType);
+		//rsp->set(beast_http::field::content_type, contentType);
 
 		rsp->body() = body;
 		rsp->prepare_payload();
@@ -175,20 +183,28 @@ private:
 		return std::move(rsp);
 	}
 
-	static std::unique_ptr<beast_http::message<false, beast_http::empty_body>> CreateResponse()
+	static std::unique_ptr<beast_http::message<false, beast_http::empty_body>> CreateResponse(const std::vector<std::pair<std::string, std::string>>& headers)
 	{
-		return CreateResponseImpl<beast_http::empty_body>();
+		return CreateResponseImpl<beast_http::empty_body>(headers);
 	}
 
 	template <typename BodyType>
-	static std::unique_ptr<beast_http::message<false, BodyType>> CreateResponseImpl()
+	static std::unique_ptr<beast_http::message<false, BodyType>> CreateResponseImpl(const std::vector<std::pair<std::string, std::string>>& headers)
 	{
-		return std::make_unique<beast_http::message<false, BodyType>>();
+		auto& rsp = std::make_unique<beast_http::message<false, BodyType>>();
+
+		for (const auto h : headers)
+		{
+			rsp->set(h.first, h.second);
+		}
+
+		return std::move(rsp);
 	}
 
 private:
 	const logger::Ptr m_log = logger::Create();
 
+	const RequestFn m_requestFn;
 	const std::shared_ptr<Params> m_params;
 	boost::beast::tcp_stream m_stream;
 
@@ -198,7 +214,7 @@ private:
 
 
 
-HttpSession::Ptr HttpSession::Create(const std::shared_ptr<Params>& params, tcp::socket&& peer)
+HttpSession::Ptr HttpSession::Create(RequestFn requestFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
 {
-	return std::make_shared<HttpSessionImpl>(params, std::move(peer));
+	return std::make_shared<HttpSessionImpl>(requestFn, params, std::move(peer));
 }

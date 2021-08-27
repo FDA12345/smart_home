@@ -11,12 +11,30 @@ public:
 
 	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
 	{
-		return false;
+		std::lock_guard lock(*m_mx);
+
+		auto it = m_routes->find(routePath);
+		if (it != m_routes->end())
+		{
+			return false;
+		}
+
+		m_routes->emplace(std::make_pair(routePath, routeFn));
+		return true;
 	}
 
 	bool RouteRemove(const std::string& routePath) override
 	{
-		return false;
+		std::lock_guard lock(*m_mx);
+
+		auto it = m_routes->find(routePath);
+		if (it == m_routes->end())
+		{
+			return false;
+		}
+
+		m_routes->erase(it);
+		return true;
 	}
 
 	bool Start() override
@@ -110,15 +128,42 @@ private:
 			return;
 		}
 
-		auto session = HttpSession::Create(m_params, std::move(peer));
+		auto requestFn = [mx = m_mx, routes = m_routes](const SessionRequest& sessReq, SessionResponse& sessResp)
+		{
+			OnRequest(*mx, *routes, sessReq, sessResp);
+		};
+
+		auto session = HttpSession::Create(std::move(requestFn), m_params, std::move(peer));
 		session->Run();
 
 		StartAccept();
 	}
 
+	static void OnRequest(std::mutex& mx, const std::map<std::string, RouteFn>& routes, const SessionRequest& sessReq, SessionResponse& sessResp)
+	{
+		std::lock_guard lock(mx);
+
+		auto it = routes.find(sessReq.resource);
+		if (it == routes.end())
+		{
+			sessResp.result = beast_http::status::not_found;
+			return;
+		}
+
+		sessResp.headers =
+		{
+			{"Content-Type", "text/html"},
+		};
+		sessResp.body = "OK";
+		sessResp.result = beast_http::status::ok;
+	}
+
 private:
 	const std::shared_ptr<Params> m_params;
 	const logger::Ptr m_log = logger::Create();
+
+	std::shared_ptr<std::mutex> m_mx = std::make_shared<std::mutex>();
+	std::shared_ptr<std::map<std::string, RouteFn>> m_routes = std::make_shared<std::map<std::string, RouteFn>>();
 
 	boost::asio::io_service m_io;
 	std::vector<std::thread> m_threads;

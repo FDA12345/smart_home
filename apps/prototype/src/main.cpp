@@ -50,14 +50,14 @@ int main()
 
 	auto server = net_server::http::json::CreateServer({"", 9898, "Prototype server ver 1.0", 1});
 
-	server->RouteAdd("fda/servers", [](const net_server::Request& req, net_server::Response& rsp)
+	server->RouteAdd("/fda/servers", [](const net_server::Request& req, net_server::Response& rsp)
 	//server->RouteAdd("$SYS/broker/version", [](const net_server::Request& req, net_server::Response& rsp)
 	{
 		std::cout << std::string(req.Payload()) << std::endl;
 		return false;
 	});
 
-	server->RouteAdd("fda/noolite", [](const net_server::Request& req, net_server::Response& rsp)
+	server->RouteAdd("/fda/noolite", [](const net_server::Request& req, net_server::Response& rsp)
 	{
 		return false;
 	});

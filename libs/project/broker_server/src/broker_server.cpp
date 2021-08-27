@@ -33,6 +33,11 @@ private:
 class ResponseImpl : public Response
 {
 public:
+	const std::string& Route() const override
+	{
+		return m_route;
+	}
+
 	const std::string_view& Payload() const override
 	{
 		return m_payloadView;
@@ -56,6 +61,8 @@ public:
 		return std::move(m_payload);
 	}
 private:
+	std::string m_route;
+
 	std::string_view m_payloadView;
 	std::vector<char> m_payload;
 

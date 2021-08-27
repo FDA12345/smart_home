@@ -3,6 +3,26 @@
 
 #include "rapidjson/document.h"
 
+class JsonRequest : public net_server::Request
+{
+public:
+	const std::string& Route() const override
+	{
+	}
+
+	const std::string_view& Payload() const override
+	{
+		return m_payloadView;
+	}
+
+private:
+	const std::string m_route;
+
+	const std::string m_payload;
+	const std::string_view m_payloadView;
+};
+
+
 class JsonHttpServer : public net_server::Server
 {
 public:
