@@ -150,6 +150,9 @@ private:
 			return;
 		}
 
+		//сделать из SessionRequest net_server::Request
+		//it->second();
+
 		sessResp.headers =
 		{
 			{"Content-Type", "text/html"},
