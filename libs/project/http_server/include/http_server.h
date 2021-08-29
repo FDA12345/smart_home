@@ -43,15 +43,6 @@ namespace net_server
 		};
 
 
-		class HttpServer : public net_server::Server
-		{
-		public:
-			using HttpRouteFn = std::function<bool(const HttpRequest& req, HttpResponse& rsp)>;
-
-		public:
-			virtual bool RouteAdd(const std::string& routePath, HttpRouteFn httpRouteFn) = 0;
-		};
-
 		struct Params
 		{
 			std::string address; //empty for tcp_v4 on all network interfaces

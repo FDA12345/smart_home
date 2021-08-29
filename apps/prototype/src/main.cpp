@@ -54,7 +54,7 @@ int main()
 	//server->RouteAdd("$SYS/broker/version", [](const net_server::Request& req, net_server::Response& rsp)
 	{
 		std::cout << std::string(req.Payload()) << std::endl;
-		return false;
+		return true;
 	});
 
 	server->RouteAdd("/fda/noolite", [](const net_server::Request& req, net_server::Response& rsp)

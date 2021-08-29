@@ -86,6 +86,26 @@ public:
 		return m_route;
 	}
 
+	ResultCodes Result() const override
+	{
+		return m_result;
+	}
+
+	void Result(ResultCodes code) override
+	{
+		m_result = code;
+	}
+
+	const std::string& ResultMsg() const override
+	{
+		return m_resultMsg;
+	}
+
+	void ResultMsg(const std::string& msg) override
+	{
+		m_resultMsg = msg;
+	}
+
 	const std::string_view& Payload() const override
 	{
 		return m_payloadView;
@@ -103,16 +123,6 @@ public:
 		{
 			m_payloadView = std::string_view();
 		}
-	}
-
-	size_t Result() const override
-	{
-		return m_result;
-	}
-
-	void Result(size_t code) override
-	{
-		m_result = code;
 	}
 
 
@@ -150,7 +160,8 @@ private:
 	std::string m_route;
 	std::vector<char> m_payload;
 	std::string_view m_payloadView;
-	size_t m_result = size_t(beast_http::status::ok);
+	ResultCodes m_result = ResultCodes::CODE_OK;
+	std::string m_resultMsg;
 };
 
 
@@ -270,16 +281,32 @@ private:
 			req.Headers().emplace_back(f.name_string().to_string(), f.value().to_string());
 		}
 
+		auto serverErrorRsp = PrepareResponse(parserReq, CreateResponse({}), ResultCodes::CODE_INTERNAL_ERROR).second;
+
 		HttpResponseImpl rsp;
-		m_requestFn(req, rsp);
+		if (!m_requestFn(req, rsp))
+		{
+			WriteResponse(std::move(serverErrorRsp));
+			return;
+		}
+
 
 		if (rsp.Payload().empty())
 		{
-			WriteResponse(PrepareResponse(parserReq, CreateResponse(rsp.Headers()), rsp.Result()));
+			auto&& preparedRsp = PrepareResponse(parserReq, CreateResponse(rsp.Headers()), rsp.Result());
+			WriteResponse(preparedRsp.first ? std::move(preparedRsp.second) : std::move(serverErrorRsp));
 		}
 		else
 		{
-			WriteResponse(PrepareResponse(parserReq, CreateResponse(rsp.Headers(), rsp.Payload()), rsp.Result()));
+			auto&& preparedRsp = PrepareResponse(parserReq, CreateResponse(rsp.Headers(), rsp.Payload()), rsp.Result());
+			if (preparedRsp.first)
+			{
+				WriteResponse(std::move(preparedRsp.second));
+			}
+			else
+			{
+				WriteResponse(std::move(serverErrorRsp));
+			}
 		}
 	}
 
@@ -287,6 +314,7 @@ private:
 	void WriteResponse(Response&& rsp)
 	{
 		logINFO(__FUNCTION__, "write response");
+
 		using type = std::remove_reference_t<decltype(rsp)>;
 		std::shared_ptr<type::element_type> sharedRsp = std::move(rsp);
 
@@ -314,15 +342,27 @@ private:
 	}
 
 	template <typename Request, typename Response>
-	Response PrepareResponse(const Request& req, Response&& rsp, const size_t result)
+	std::pair<bool, Response> PrepareResponse(const Request& req, Response&& rsp, const ResultCodes result)
 	{
+		bool ok = true;
 		rsp->set(beast_http::field::server, m_params->serverName);
 
-		rsp->result(static_cast<beast_http::status>(result));
+		switch (result)
+		{
+		case ResultCodes::CODE_OK:				rsp->result(beast_http::status::ok); break;
+		case ResultCodes::CODE_NOT_FOUND:		rsp->result(beast_http::status::not_found); break;
+		case ResultCodes::CODE_INTERNAL_ERROR:	rsp->result(beast_http::status::internal_server_error); break;
+		case ResultCodes::CODE_BUSY:			rsp->result(beast_http::status::service_unavailable); break;
+		default:
+			logERROR(__FUNCTION__, "unsupported result code " << size_t(result));
+			ok = false;
+			break;
+		}
+
 		rsp->version(req.version());
 		rsp->keep_alive(req.keep_alive());
 
-		return std::move(rsp);
+		return std::make_pair(ok, std::move(rsp));
 	}
 
 	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponse(const HeaderList& headers, const std::string_view& body)

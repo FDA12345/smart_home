@@ -16,6 +16,15 @@ public:
 	virtual const std::string_view& Payload() const = 0;
 };
 
+
+enum class ResultCodes
+{
+	CODE_OK,
+	CODE_NOT_FOUND,
+	CODE_INTERNAL_ERROR,
+	CODE_BUSY,
+};
+
 class Response
 {
 public:
@@ -23,11 +32,14 @@ public:
 
 	virtual const std::string& Route() const = 0;
 
+	virtual ResultCodes Result() const = 0;
+	virtual void Result(ResultCodes code) = 0;
+
+	virtual const std::string& ResultMsg() const = 0;
+	virtual void ResultMsg(const std::string& msg) = 0;
+
 	virtual const std::string_view& Payload() const = 0;
 	virtual void Payload(const std::string_view& payload) = 0;
-
-	virtual size_t Result() const = 0;
-	virtual void Result(size_t code) = 0;
 };
 
 class Server

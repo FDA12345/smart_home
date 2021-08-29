@@ -1,33 +1,12 @@
 #include "stdafx.h"
 
-struct RouteFnTypes
-{
-	net_server::Server::RouteFn netRouteFn;
-	HttpServer::HttpRouteFn httpRouteFn;
-};
-
-
-class HttpServerImpl : public HttpServer
+class HttpServer : public Server
 {
 public:
-	HttpServerImpl(const Params& params)
+	HttpServer(const Params& params)
 		: m_params(std::make_shared<Params>(params))
 		, m_acceptor(boost::beast::net::make_strand(m_io))
 	{
-	}
-
-	bool RouteAdd(const std::string& routePath, HttpRouteFn httpRouteFn) override
-	{
-		std::lock_guard lock(*m_mx);
-
-		auto it = m_routes->find(routePath);
-		if (it != m_routes->end())
-		{
-			return false;
-		}
-
-		m_routes->emplace(std::make_pair(routePath, RouteFnTypes{ nullptr, httpRouteFn }));
-		return true;
 	}
 
 	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
@@ -40,7 +19,7 @@ public:
 			return false;
 		}
 
-		m_routes->emplace(std::make_pair(routePath, RouteFnTypes{ routeFn, nullptr }));
+		m_routes->emplace(std::make_pair(routePath, routeFn));
 		return true;
 	}
 
@@ -138,7 +117,7 @@ private:
 	void StartAccept()
 	{
 		m_acceptor.async_accept(boost::beast::net::make_strand(m_io),
-			std::bind(&HttpServerImpl::OnAccept, this, std::placeholders::_1, std::placeholders::_2));// // async_accept();
+			std::bind(&HttpServer::OnAccept, this, std::placeholders::_1, std::placeholders::_2));// // async_accept();
 	}
 
 	void OnAccept(const boost::system::error_code& ec, tcp::socket&& peer)
@@ -151,7 +130,7 @@ private:
 
 		auto requestFn = [mx = m_mx, routes = m_routes](const HttpRequest& req, HttpResponse& rsp)
 		{
-			OnHttpRequest(*mx, *routes, req, rsp);
+			return OnRequest(*mx, *routes, req, rsp);
 		};
 
 		auto session = HttpSession::Create(std::move(requestFn), m_params, std::move(peer));
@@ -160,25 +139,18 @@ private:
 		StartAccept();
 	}
 
-	static void OnHttpRequest(std::mutex& mx, const std::map<std::string, RouteFnTypes>& routes, const HttpRequest& req, HttpResponse& rsp)
+	static bool OnRequest(std::mutex& mx, const std::map<std::string, RouteFn>& routes, const HttpRequest& req, HttpResponse& rsp)
 	{
 		std::lock_guard lock(mx);
 
 		auto it = routes.find(req.Route());
 		if (it == routes.end())
 		{
-			rsp.Result(size_t(beast_http::status::not_found));
-			return;
+			rsp.Result(ResultCodes::CODE_NOT_FOUND);
+			return true;
 		}
 
-		if (it->second.netRouteFn)
-		{
-			it->second.netRouteFn(req, rsp);
-		}
-		else
-		{
-			it->second.httpRouteFn(req, rsp);
-		}
+		return it->second(req, rsp);
 	}
 
 private:
@@ -186,7 +158,7 @@ private:
 	const logger::Ptr m_log = logger::Create();
 
 	std::shared_ptr<std::mutex> m_mx = std::make_shared<std::mutex>();
-	std::shared_ptr<std::map<std::string, RouteFnTypes>> m_routes = std::make_shared<std::map<std::string, RouteFnTypes>>();
+	std::shared_ptr<std::map<std::string, RouteFn>> m_routes = std::make_shared<std::map<std::string, RouteFn>>();
 
 	boost::asio::io_service m_io;
 	std::vector<std::thread> m_threads;
@@ -195,5 +167,5 @@ private:
 
 Ptr net_server::http::CreateServer(const Params& params)
 {
-	return std::make_unique<HttpServerImpl>(params);
+	return std::make_unique<HttpServer>(params);
 }

@@ -49,8 +49,19 @@ public:
 		m_payloadView = std::string_view(&m_payload[0], m_payload.size());
 	}
 
-	size_t Result() const override { return m_result; }
-	void Result(size_t code) override { m_result = code; }
+	ResultCodes Result() const override { return m_result; }
+	void Result(ResultCodes code) override { m_result = code; }
+
+	const std::string& ResultMsg() const override
+	{
+		return m_resultMsg;
+	}
+
+	void ResultMsg(const std::string& msg) override
+	{
+		m_resultMsg = msg;
+	}
+
 
 	std::vector<char>&& TransferPayload()
 	{
@@ -63,7 +74,7 @@ private:
 	std::string_view m_payloadView;
 	std::vector<char> m_payload;
 
-	size_t m_result = size_t(200);//HTTP OK
+	ResultCodes m_result = ResultCodes::CODE_OK;
 	std::string m_resultMsg;
 };
 
