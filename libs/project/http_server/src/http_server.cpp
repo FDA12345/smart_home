@@ -128,9 +128,9 @@ private:
 			return;
 		}
 
-		auto requestFn = [mx = m_mx, routes = m_routes](const SessionRequest& sessReq, SessionResponse& sessResp)
+		auto requestFn = [mx = m_mx, routes = m_routes](const HttpRequest& req, HttpResponse& rsp)
 		{
-			OnRequest(*mx, *routes, sessReq, sessResp);
+			OnRequest(*mx, *routes, req, rsp);
 		};
 
 		auto session = HttpSession::Create(std::move(requestFn), m_params, std::move(peer));
@@ -139,26 +139,21 @@ private:
 		StartAccept();
 	}
 
-	static void OnRequest(std::mutex& mx, const std::map<std::string, RouteFn>& routes, const SessionRequest& sessReq, SessionResponse& sessResp)
+	static void OnRequest(std::mutex& mx, const std::map<std::string, RouteFn>& routes, const HttpRequest& req, HttpResponse& rsp)
 	{
 		std::lock_guard lock(mx);
 
-		auto it = routes.find(sessReq.resource);
+		auto it = routes.find(req.Route());
 		if (it == routes.end())
 		{
-			sessResp.result = beast_http::status::not_found;
+			rsp.Result(size_t(beast_http::status::not_found));
 			return;
 		}
 
-		//сделать из SessionRequest net_server::Request
-		//it->second();
+		rsp.Headers().emplace_back("Content-Type", "text/html");
 
-		sessResp.headers =
-		{
-			{"Content-Type", "text/html"},
-		};
-		sessResp.body = "OK";
-		sessResp.result = beast_http::status::ok;
+		rsp.Payload("OK");
+		rsp.Result(size_t(beast_http::status::ok));
 	}
 
 private:

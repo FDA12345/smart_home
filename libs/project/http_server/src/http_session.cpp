@@ -1,5 +1,160 @@
 #include "stdafx.h"
 
+
+class HttpRequestImpl : public HttpRequest
+{
+public:
+	//Request
+	const std::string& Route() const override
+	{
+		return m_route;
+	}
+
+	const std::string_view& Payload() const override
+	{
+		return m_payloadView;
+	}
+
+
+	//HttpRequest
+	const std::string& Method() const override
+	{
+		return m_method;
+	}
+
+	int Version() const override
+	{
+		return m_version;
+	}
+
+	const HeaderList& Headers() const override
+	{
+		return m_headers;
+	}
+
+
+	//own methods
+	void Route(const std::string& route)
+	{
+		m_route = route;
+	}
+
+	void Payload(std::vector<char>&& payload)
+	{
+		m_payload = std::move(payload);
+
+		if (!m_payload.empty())
+		{
+			m_payloadView = std::string_view(&m_payload[0], m_payload.size());
+		}
+		else
+		{
+			m_payloadView = std::string_view();
+		}
+	}
+
+	void Method(const std::string& method)
+	{
+		m_method = method;
+	}
+
+	void Version(int version)
+	{
+		m_version = version;
+	}
+
+	HeaderList& Headers()
+	{
+		return m_headers;
+	}
+
+private:
+	std::string m_method;
+	int m_version = 11;
+	HeaderList m_headers;
+	std::string m_route;
+	std::vector<char> m_payload;
+	std::string_view m_payloadView;
+};
+
+class HttpResponseImpl : public HttpResponse
+{
+public:
+	//Response
+	const std::string& Route() const override
+	{
+		return m_route;
+	}
+
+	const std::string_view& Payload() const override
+	{
+		return m_payloadView;
+	}
+
+	void Payload(const std::string_view& payload) override
+	{
+		m_payload = { payload.data(), payload.data() + payload.size() };
+
+		if (!m_payload.empty())
+		{
+			m_payloadView = std::string_view(&m_payload[0], m_payload.size());
+		}
+		else
+		{
+			m_payloadView = std::string_view();
+		}
+	}
+
+	size_t Result() const override
+	{
+		return m_result;
+	}
+
+	void Result(size_t code) override
+	{
+		m_result = code;
+	}
+
+
+	//HttpResponse
+	int Version() const override
+	{
+		return m_version;
+	}
+
+	void Version(int version) override
+	{
+		m_version = version;
+	}
+
+	const HeaderList& Headers() const override
+	{
+		return m_headers;
+	}
+
+	HeaderList& Headers() override
+	{
+		return m_headers;
+	}
+
+
+	//own methods
+	void Route(const std::string& route)
+	{
+		m_route = route;
+	}
+
+private:
+	int m_version = 11;
+	HeaderList m_headers;
+	std::string m_route;
+	std::vector<char> m_payload;
+	std::string_view m_payloadView;
+	size_t m_result = size_t(beast_http::status::ok);
+};
+
+
+
 class HttpSessionImpl
 	: public HttpSession
 	, public std::enable_shared_from_this<HttpSessionImpl>
@@ -102,29 +257,29 @@ private:
 	{
 		logINFO(__FUNCTION__, "parse body");
 
-		const auto& req = m_parser->get();
+		const auto& parserReq = m_parser->get();
 
-		SessionRequest sessReq;
-		sessReq.version = req.version();
-		sessReq.method = req.method_string().to_string();
-		sessReq.resource = req.target().to_string();
-		sessReq.body = req.body();
+		HttpRequestImpl req;
+		req.Version(parserReq.version());
+		req.Method(parserReq.method_string().to_string());
+		req.Route(parserReq.target().to_string());
+		req.Payload({ &parserReq.body()[0], &parserReq.body()[parserReq.body().size()] });
 
-		for (const auto& f : req)
+		for (const auto& f : parserReq)
 		{
-			sessReq.headers.emplace_back(std::make_pair(f.name_string(), f.value().to_string()));
+			req.Headers().emplace_back(f.name_string().to_string(), f.value().to_string());
 		}
 
-		SessionResponse sessRsp;
-		m_requestFn(sessReq, sessRsp);
+		HttpResponseImpl rsp;
+		m_requestFn(req, rsp);
 
-		if (sessRsp.body.empty())
+		if (rsp.Payload().empty())
 		{
-			WriteResponse(PrepareResponse(req, CreateResponse(sessRsp.headers), sessRsp.result));
+			WriteResponse(PrepareResponse(parserReq, CreateResponse(rsp.Headers()), rsp.Result()));
 		}
 		else
 		{
-			WriteResponse(PrepareResponse(req, CreateResponse(sessRsp.headers, sessRsp.body), sessRsp.result));
+			WriteResponse(PrepareResponse(parserReq, CreateResponse(rsp.Headers(), rsp.Payload()), rsp.Result()));
 		}
 	}
 
@@ -159,22 +314,20 @@ private:
 	}
 
 	template <typename Request, typename Response>
-	Response PrepareResponse(const Request& req, Response&& rsp, const beast_http::status result)
+	Response PrepareResponse(const Request& req, Response&& rsp, const size_t result)
 	{
 		rsp->set(beast_http::field::server, m_params->serverName);
 
-		rsp->result(result);
+		rsp->result(static_cast<beast_http::status>(result));
 		rsp->version(req.version());
 		rsp->keep_alive(req.keep_alive());
 
 		return std::move(rsp);
 	}
 
-	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponse(const std::vector<std::pair<std::string, std::string>>& headers, const std::string_view& body)
+	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponse(const HeaderList& headers, const std::string_view& body)
 	{
 		auto rsp = CreateResponseImpl<beast_http::string_body>(headers);
-
-		//rsp->set(beast_http::field::content_type, contentType);
 
 		rsp->body() = body;
 		rsp->prepare_payload();
@@ -183,19 +336,19 @@ private:
 		return std::move(rsp);
 	}
 
-	static std::unique_ptr<beast_http::message<false, beast_http::empty_body>> CreateResponse(const std::vector<std::pair<std::string, std::string>>& headers)
+	static std::unique_ptr<beast_http::message<false, beast_http::empty_body>> CreateResponse(const HeaderList& headers)
 	{
 		return CreateResponseImpl<beast_http::empty_body>(headers);
 	}
 
 	template <typename BodyType>
-	static std::unique_ptr<beast_http::message<false, BodyType>> CreateResponseImpl(const std::vector<std::pair<std::string, std::string>>& headers)
+	static std::unique_ptr<beast_http::message<false, BodyType>> CreateResponseImpl(const HeaderList& headers)
 	{
 		auto& rsp = std::make_unique<beast_http::message<false, BodyType>>();
 
 		for (const auto h : headers)
 		{
-			rsp->set(h.first, h.second);
+			rsp->set(h.name, h.value);
 		}
 
 		return std::move(rsp);
