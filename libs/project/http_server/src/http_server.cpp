@@ -1,12 +1,33 @@
 #include "stdafx.h"
 
-class HttpServer : public net_server::Server
+struct RouteFnTypes
+{
+	net_server::Server::RouteFn netRourteFn;
+	HttpServer::HttpRouteFn httpRourteFn;
+};
+
+
+class HttpServerImpl : public HttpServer
 {
 public:
-	HttpServer(const Params& params)
+	HttpServerImpl(const Params& params)
 		: m_params(std::make_shared<Params>(params))
 		, m_acceptor(boost::beast::net::make_strand(m_io))
 	{
+	}
+
+	bool RouteAdd(const std::string& routePath, HttpRouteFn httpRouteFn) override
+	{
+		std::lock_guard lock(*m_mx);
+
+		auto it = m_routes->find(routePath);
+		if (it != m_routes->end())
+		{
+			return false;
+		}
+
+		m_routes->emplace(std::make_pair(routePath, RouteFnTypes{ nullptr, httpRouteFn }));
+		return true;
 	}
 
 	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
@@ -19,7 +40,7 @@ public:
 			return false;
 		}
 
-		m_routes->emplace(std::make_pair(routePath, routeFn));
+		m_routes->emplace(std::make_pair(routePath, RouteFnTypes{ routeFn, nullptr }));
 		return true;
 	}
 
@@ -117,7 +138,7 @@ private:
 	void StartAccept()
 	{
 		m_acceptor.async_accept(boost::beast::net::make_strand(m_io),
-			std::bind(&HttpServer::OnAccept, this, std::placeholders::_1, std::placeholders::_2));// // async_accept();
+			std::bind(&HttpServerImpl::OnAccept, this, std::placeholders::_1, std::placeholders::_2));// // async_accept();
 	}
 
 	void OnAccept(const boost::system::error_code& ec, tcp::socket&& peer)
@@ -130,7 +151,7 @@ private:
 
 		auto requestFn = [mx = m_mx, routes = m_routes](const HttpRequest& req, HttpResponse& rsp)
 		{
-			OnRequest(*mx, *routes, req, rsp);
+			OnHttpRequest(*mx, *routes, req, rsp);
 		};
 
 		auto session = HttpSession::Create(std::move(requestFn), m_params, std::move(peer));
@@ -139,7 +160,7 @@ private:
 		StartAccept();
 	}
 
-	static void OnRequest(std::mutex& mx, const std::map<std::string, RouteFn>& routes, const HttpRequest& req, HttpResponse& rsp)
+	static void OnHttpRequest(std::mutex& mx, const std::map<std::string, RouteFnTypes>& routes, const HttpRequest& req, HttpResponse& rsp)
 	{
 		std::lock_guard lock(mx);
 
@@ -161,7 +182,7 @@ private:
 	const logger::Ptr m_log = logger::Create();
 
 	std::shared_ptr<std::mutex> m_mx = std::make_shared<std::mutex>();
-	std::shared_ptr<std::map<std::string, RouteFn>> m_routes = std::make_shared<std::map<std::string, RouteFn>>();
+	std::shared_ptr<std::map<std::string, RouteFnTypes>> m_routes = std::make_shared<std::map<std::string, RouteFnTypes>>();
 
 	boost::asio::io_service m_io;
 	std::vector<std::thread> m_threads;
@@ -170,5 +191,5 @@ private:
 
 Ptr net_server::http::CreateServer(const Params& params)
 {
-	return std::make_unique<HttpServer>(params);
+	return std::make_unique<HttpServerImpl>(params);
 }
