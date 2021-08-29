@@ -54,9 +54,9 @@ int main()
 	//server->RouteAdd("$SYS/broker/version", [](const net_server::Request& req, net_server::Response& rsp)
 	{
 		std::cout << std::string(req.Payload()) << std::endl;
-		rsp.Result(net_server::ResultCodes::CODE_OK);
+		rsp.Result(net_server::ResultCodes::CODE_NOT_FOUND);
 		rsp.ResultMsg("");
-		rsp.Payload("It's okay");
+		rsp.Payload("It's failed");
 		return true;
 	});
 
