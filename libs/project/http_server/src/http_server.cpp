@@ -2,8 +2,8 @@
 
 struct RouteFnTypes
 {
-	net_server::Server::RouteFn netRourteFn;
-	HttpServer::HttpRouteFn httpRourteFn;
+	net_server::Server::RouteFn netRouteFn;
+	HttpServer::HttpRouteFn httpRouteFn;
 };
 
 
@@ -171,10 +171,14 @@ private:
 			return;
 		}
 
-		rsp.Headers().emplace_back("Content-Type", "text/html");
-
-		rsp.Payload("OK");
-		rsp.Result(size_t(beast_http::status::ok));
+		if (it->second.netRouteFn)
+		{
+			it->second.netRouteFn(req, rsp);
+		}
+		else
+		{
+			it->second.httpRouteFn(req, rsp);
+		}
 	}
 
 private:
