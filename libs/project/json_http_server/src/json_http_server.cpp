@@ -35,7 +35,18 @@ public:
 	{
 		auto jsonRouteFn = [](const net_server::Request& req, net_server::Response& rsp)
 		{
-			return false;
+			if (
+				(req.Type() != net_server::http::ReqRspType) ||
+				(rsp.Type() != net_server::http::ReqRspType)
+				)
+			{
+				return false;
+			}
+
+			auto& httpReq = static_cast<const net_server::http::HttpRequest&>(req);
+			auto& httpRsp = static_cast<net_server::http::HttpResponse&>(rsp);
+
+			return OnHttpRoute(httpReq, httpRsp);
 		};
 
 		return m_httpServer->RouteAdd(routePath, std::move(jsonRouteFn));
@@ -54,6 +65,12 @@ public:
 	void Stop() override
 	{
 		m_httpServer->Stop();
+	}
+
+private:
+	static bool OnHttpRoute(const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
+	{
+		return false;
 	}
 
 private:
