@@ -132,18 +132,18 @@ private:
 			return;
 		}
 
-		auto requestFn = [mx = m_mx, routes = m_routes](const HttpRequest& req, HttpResponse& rsp)
+		auto routeFn = [mx = m_mx, routes = m_routes](const Request& req, Response& rsp)
 		{
 			return OnRequest(*mx, *routes, req, rsp);
 		};
 
-		auto session = HttpSession::Create(std::move(requestFn), m_params, std::move(peer));
+		auto session = HttpSession::Create(std::move(routeFn), m_params, std::move(peer));
 		session->Run();
 
 		StartAccept();
 	}
 
-	static bool OnRequest(std::mutex& mx, const std::map<std::string, RouteFn>& routes, const HttpRequest& req, HttpResponse& rsp)
+	static bool OnRequest(std::mutex& mx, const std::map<std::string, RouteFn>& routes, const Request& req, Response& rsp)
 	{
 		std::lock_guard lock(mx);
 

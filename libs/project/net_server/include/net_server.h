@@ -46,11 +46,10 @@ public:
 	virtual void Payload(const std::string_view& payload) = 0;
 };
 
+using RouteFn = std::function<bool(const Request& req, Response& rsp)>;
+
 class Server
 {
-public:
-	using RouteFn = std::function<bool(const Request& req, Response& rsp)>;
-
 public:
 	virtual ~Server() = default;
 

@@ -31,13 +31,14 @@ public:
 	{
 	}
 
-	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
+	bool RouteAdd(const std::string& routePath, net_server::RouteFn routeFn) override
 	{
-		auto httpRouteFn = [](const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
+		auto jsonRouteFn = [](const net_server::Request& req, net_server::Response& rsp)
 		{
+			return false;
 		};
 
-		return m_httpServer->RouteAdd(routePath, routeFn);
+		return m_httpServer->RouteAdd(routePath, std::move(jsonRouteFn));
 	}
 
 	bool RouteRemove(const std::string& routePath) override

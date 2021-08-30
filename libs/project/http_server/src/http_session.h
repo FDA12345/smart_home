@@ -3,10 +3,8 @@
 class HttpSession
 {
 public:
-	using RequestFn = std::function<bool(const HttpRequest& req, HttpResponse& rsp)>;
-
 	using Ptr = std::shared_ptr<HttpSession>;
-	static Ptr Create(RequestFn requestFn, const std::shared_ptr<Params>& params, tcp::socket&& peer);
+	static Ptr Create(net_server::RouteFn routeFn, const std::shared_ptr<Params>& params, tcp::socket&& peer);
 
 public:
 	virtual ~HttpSession() = default;

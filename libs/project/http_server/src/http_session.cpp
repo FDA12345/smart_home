@@ -183,8 +183,8 @@ public:
 	using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-	HttpSessionImpl(RequestFn requestFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
-		: m_requestFn(requestFn)
+	HttpSessionImpl(RouteFn routeFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
+		: m_routeFn(routeFn)
 		, m_params(params)
 		, m_stream(std::move(peer))
 	{
@@ -293,7 +293,7 @@ private:
 		auto serverErrorRsp = PrepareResponse(parserReq, CreateResponse({}), ResultCodes::CODE_INTERNAL_ERROR).second;
 
 		HttpResponseImpl rsp;
-		if (!m_requestFn(req, rsp))
+		if (!m_routeFn(req, rsp))
 		{
 			WriteResponse(std::move(serverErrorRsp));
 			return;
@@ -406,7 +406,7 @@ private:
 private:
 	const logger::Ptr m_log = logger::Create();
 
-	const RequestFn m_requestFn;
+	const RouteFn m_routeFn;
 	const std::shared_ptr<Params> m_params;
 	boost::beast::tcp_stream m_stream;
 
@@ -416,7 +416,7 @@ private:
 
 
 
-HttpSession::Ptr HttpSession::Create(RequestFn requestFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
+HttpSession::Ptr HttpSession::Create(RouteFn routeFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
 {
-	return std::make_shared<HttpSessionImpl>(requestFn, params, std::move(peer));
+	return std::make_shared<HttpSessionImpl>(routeFn, params, std::move(peer));
 }
