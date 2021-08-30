@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "http_request.h"
 
-using namespace net_server::http;
-
 class HttpRequestFullAccessImpl : public HttpRequestFullAccess
 {
 public:

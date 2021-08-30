@@ -132,6 +132,7 @@ private:
 			return;
 		}
 
+		//die time moment of session may be later than of server
 		auto routeFn = [mx = m_mx, routes = m_routes](const Request& req, Response& rsp)
 		{
 			return OnRequest(*mx, *routes, req, rsp);

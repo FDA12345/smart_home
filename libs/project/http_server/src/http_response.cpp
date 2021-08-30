@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "http_response.h"
 
-using namespace net_server::http;
-
 class HttpResponseFullAccessImpl : public HttpResponseFullAccess
 {
 public:
