@@ -6,6 +6,8 @@ namespace net_server
 {
 	namespace http
 	{
+		extern std::string ReqRspType;
+
 		struct Header
 		{
 			Header(const std::string& name_, const std::string& value_)

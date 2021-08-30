@@ -33,6 +33,10 @@ public:
 
 	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
 	{
+		auto httpRouteFn = [](const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
+		{
+		};
+
 		return m_httpServer->RouteAdd(routePath, routeFn);
 	}
 

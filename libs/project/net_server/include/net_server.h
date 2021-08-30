@@ -12,6 +12,8 @@ class Request
 public:
 	virtual ~Request() = default;
 
+	virtual const std::string& Type() const = 0;//type of Response, set by owner server
+
 	virtual const std::string& Route() const = 0;
 	virtual const std::string_view& Payload() const = 0;
 };
@@ -29,6 +31,8 @@ class Response
 {
 public:
 	virtual ~Response() = default;
+
+	virtual const std::string& Type() const = 0;//type of Response, set by owner server
 
 	virtual const std::string& Route() const = 0;
 

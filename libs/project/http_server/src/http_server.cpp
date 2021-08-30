@@ -1,5 +1,9 @@
 #include "stdafx.h"
 
+
+std::string net_server::http::ReqRspType = "HTTP";
+
+
 class HttpServer : public Server
 {
 public:

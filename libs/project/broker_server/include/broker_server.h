@@ -5,11 +5,13 @@
 
 namespace net_server
 {
-namespace broker
-{
+	namespace broker
+	{
 
-//create server via specified broker instance
-Ptr CreateServer(::broker::Ptr&& broker);
+		extern std::string ReqRspType;
 
-};//broker
+		//create server via specified broker instance
+		Ptr CreateServer(::broker::Ptr&& broker);
+
+	};//broker
 };//net_server

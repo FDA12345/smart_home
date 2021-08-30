@@ -1,10 +1,14 @@
 #include "stdafx.h"
 
-
 class HttpRequestImpl : public HttpRequest
 {
 public:
 	//Request
+	const std::string& Type() const override
+	{
+		return ReqRspType;
+	}
+
 	const std::string& Route() const override
 	{
 		return m_route;
@@ -80,6 +84,11 @@ private:
 class HttpResponseImpl : public HttpResponse
 {
 public:
+	const std::string& Type() const override
+	{
+		return ReqRspType;
+	}
+
 	//Response
 	const std::string& Route() const override
 	{

@@ -3,14 +3,20 @@
 using namespace ::broker;
 using namespace net_server;
 
+std::string ReqRspType = "BROKER";
 
-class RequestImpl : public Request
+class BrokerRequestImpl : public Request
 {
 public:
-	RequestImpl(const Msg& msg)
+	BrokerRequestImpl(const Msg& msg)
 		: m_topic(msg.Topic())
 		, m_payload(msg.Payload())
 	{
+	}
+
+	const std::string& Type() const override
+	{
+		return ReqRspType;
 	}
 
 	const std::string& Route() const override
@@ -30,9 +36,14 @@ private:
 
 
 
-class ResponseImpl : public Response
+class BrokerResponseImpl : public Response
 {
 public:
+	const std::string& Type() const override
+	{
+		return ReqRspType;
+	}
+
 	const std::string& Route() const override
 	{
 		return m_route;
@@ -122,8 +133,8 @@ public:
 			routeInfo = it->second;
 		}
 
-		RequestImpl req{ msg };
-		ResponseImpl rsp;
+		BrokerRequestImpl req{ msg };
+		BrokerResponseImpl rsp;
 
 		if (routeInfo.routeFn(req, rsp))
 		{
