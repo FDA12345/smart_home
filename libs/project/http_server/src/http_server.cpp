@@ -9,7 +9,8 @@ class HttpServer : public Server
 public:
 	HttpServer(const Params& params)
 		: m_params(std::make_shared<Params>(params))
-		, m_acceptor(boost::beast::net::make_strand(m_io))
+		, m_acceptor(m_io)
+		, m_socket(m_io)
 	{
 	}
 
@@ -120,11 +121,10 @@ public:
 private:
 	void StartAccept()
 	{
-		m_acceptor.async_accept(boost::beast::net::make_strand(m_io),
-			std::bind(&HttpServer::OnAccept, this, std::placeholders::_1, std::placeholders::_2));// // async_accept();
+		m_acceptor.async_accept(m_socket, std::bind(&HttpServer::OnAccept, this, std::placeholders::_1));
 	}
 
-	void OnAccept(const boost::system::error_code& ec, tcp::socket&& peer)
+	void OnAccept(const boost::system::error_code& ec)
 	{
 		if (ec)
 		{
@@ -138,8 +138,11 @@ private:
 			return OnRequest(*mx, *routes, req, rsp);
 		};
 
-		auto session = HttpSession::Create(std::move(routeFn), m_params, std::move(peer));
-		session->Run();
+		HttpSession::Create(
+			std::move(routeFn),
+			m_params,
+			std::move(m_socket)
+		)->Run();
 
 		StartAccept();
 	}
@@ -168,6 +171,7 @@ private:
 	boost::asio::io_service m_io;
 	std::vector<std::thread> m_threads;
 	tcp::acceptor m_acceptor;
+	tcp::socket m_socket;
 };
 
 Ptr net_server::http::CreateServer(const Params& params)

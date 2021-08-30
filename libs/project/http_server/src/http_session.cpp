@@ -11,10 +11,12 @@ public:
 	using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-	HttpSessionImpl(RouteFn routeFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
+	HttpSessionImpl(RouteFn routeFn, const std::shared_ptr<Params>& params, tcp::socket&& socket)
 		: m_routeFn(routeFn)
 		, m_params(params)
-		, m_stream(std::move(peer))
+		, m_socket(std::move(socket))
+		, m_strand(m_socket.get_executor().context())
+		, m_timer(m_strand.context())
 	{
 		logINFO(__FUNCTION__, "c_tor");
 	}
@@ -26,23 +28,44 @@ public:
 
 	void Run()
 	{
-		boost::beast::net::dispatch(m_stream.get_executor(),
-			std::bind(&HttpSessionImpl::OnReadHeaders, shared_from_this()));
+		logINFO(__FUNCTION__, "run");
+		m_strand.dispatch(std::bind(&HttpSessionImpl::OnReadHeaders, shared_from_this()));
 	}
 
 private:
 	void OnReadHeaders()
 	{
-		m_stream.expires_after(std::chrono::seconds(30));
+		logINFO(__FUNCTION__, "on read headers");
+
+		RestartTimer();
 
 		//for new request we resetting parser aka new operation
 		m_parser = std::make_unique<beast_http::request_parser<beast_http::string_body>>();
 
-		beast_http::async_read_header(m_stream, m_buf, *m_parser, std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+		beast_http::async_read_header(m_socket, m_buf, *m_parser, m_strand.wrap(std::bind(&HttpSessionImpl::OnHeaders, shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
+	}
+
+	void RestartTimer()
+	{
+		m_timer.expires_from_now(boost::posix_time::seconds(30));
+		m_timer.async_wait(std::bind(&HttpSessionImpl::OnTimeout, shared_from_this(), std::placeholders::_1));
+	}
+
+	void OnTimeout(const boost::system::error_code& ec)
+	{
+		if (ec)
+		{
+			return;
+		}
+
+		logDEBUG(__FUNCTION__, "socket timeout received");
+		boost::system::error_code e;
+		m_socket.cancel(e);
 	}
 
 	void OnHeaders(const boost::system::error_code& ec, std::size_t bytes_transferred)
 	{
+		logINFO(__FUNCTION__, "on headers");
 		if (ec == beast_http::error::end_of_stream)
 		{
 			Close();
@@ -66,6 +89,7 @@ private:
 
 	void ParseHeaders()
 	{
+		logINFO(__FUNCTION__, "parse headers");
 		ReadBody();
 	}
 
@@ -73,14 +97,28 @@ private:
 	{
 		logINFO(__FUNCTION__, "close");
 
-		boost::beast::error_code ec;
-		m_stream.socket().shutdown(tcp::socket::shutdown_send, ec);
+		{
+			boost::beast::error_code ec;
+			m_socket.shutdown(tcp::socket::shutdown_send, ec);
+		}
+
+		{
+			boost::beast::error_code ec;
+			m_timer.cancel(ec);
+		}
 	}
 
 	void ReadBody()
 	{
+		if (m_parser->is_done())
+		{
+			logDEBUG(__FUNCTION__, "read finished due to is done");
+			m_strand.post(std::bind(&HttpSessionImpl::ParseBody, shared_from_this()));
+			return;
+		}
+
 		logINFO(__FUNCTION__, "read body");
-		beast_http::async_read_some(m_stream, m_buf, *m_parser, std::bind(&HttpSessionImpl::OnBody, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+		beast_http::async_read_some(m_socket, m_buf, *m_parser, m_strand.wrap(std::bind(&HttpSessionImpl::OnBody, shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
 	}
 
 	void OnBody(const boost::system::error_code& ec, std::size_t bytes_transferred)
@@ -155,8 +193,8 @@ private:
 		using type = std::remove_reference_t<decltype(rspMsg)>;
 		std::shared_ptr<type::element_type> sharedRspMsg = std::move(rspMsg);
 
-		beast_http::async_write(m_stream, *sharedRspMsg, std::bind(&HttpSessionImpl::OnWriteMsg<decltype(sharedRspMsg)>,
-			shared_from_this(), sharedRspMsg, std::placeholders::_1, std::placeholders::_2));
+		beast_http::async_write(m_socket, *sharedRspMsg, m_strand.wrap(std::bind(&HttpSessionImpl::OnWriteMsg<decltype(sharedRspMsg)>,
+			shared_from_this(), sharedRspMsg, std::placeholders::_1, std::placeholders::_2)));
 	}
 
 	template <typename ResponseMsg>
@@ -236,7 +274,9 @@ private:
 
 	const RouteFn m_routeFn;
 	const std::shared_ptr<Params> m_params;
-	boost::beast::tcp_stream m_stream;
+	tcp::socket m_socket;
+	boost::asio::io_service::strand m_strand;
+	boost::asio::deadline_timer m_timer;
 
 	std::unique_ptr<beast_http::request_parser<beast_http::string_body>> m_parser;
 	boost::beast::flat_buffer m_buf;
