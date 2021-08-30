@@ -11,11 +11,13 @@ public:
 	using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-	HttpSessionImpl(RouteFn routeFn, const std::shared_ptr<Params>& params, tcp::socket&& socket)
+	HttpSessionImpl(RouteFn routeFn, const std::shared_ptr<Params>& params, const std::shared_ptr<boost::asio::io_service>& io, tcp::socket&& socket)
 		: m_routeFn(routeFn)
 		, m_params(params)
 		, m_socket(std::move(socket))
-		, m_strand(m_socket.get_executor().context())
+		//, m_strand(m_socket.get_executor().context()) BOOST 1_69_0
+		, m_io(io)
+		, m_strand(*m_io)
 		, m_timer(m_strand.context())
 	{
 		logINFO(__FUNCTION__, "c_tor");
@@ -275,7 +277,9 @@ private:
 	const RouteFn m_routeFn;
 	const std::shared_ptr<Params> m_params;
 	tcp::socket m_socket;
+	std::shared_ptr<boost::asio::io_service> m_io;
 	boost::asio::io_service::strand m_strand;
+	//boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
 	boost::asio::deadline_timer m_timer;
 
 	std::unique_ptr<beast_http::request_parser<beast_http::string_body>> m_parser;
@@ -284,7 +288,8 @@ private:
 
 
 
-HttpSession::Ptr HttpSession::Create(RouteFn routeFn, const std::shared_ptr<Params>& params, tcp::socket&& peer)
+HttpSession::Ptr HttpSession::Create(RouteFn routeFn, const std::shared_ptr<Params>& params,
+	const std::shared_ptr<boost::asio::io_service>& io, tcp::socket&& peer)
 {
-	return std::make_shared<HttpSessionImpl>(routeFn, params, std::move(peer));
+	return std::make_shared<HttpSessionImpl>(routeFn, params, io, std::move(peer));
 }

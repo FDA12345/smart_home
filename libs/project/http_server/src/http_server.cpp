@@ -9,9 +9,15 @@ class HttpServer : public Server
 public:
 	HttpServer(const Params& params)
 		: m_params(std::make_shared<Params>(params))
-		, m_acceptor(m_io)
-		, m_socket(m_io)
+		, m_acceptor(*m_io)
+		, m_socket(*m_io)
 	{
+		logDEBUG(__FUNCTION__, "c_tor");
+	}
+
+	~HttpServer()
+	{
+		logDEBUG(__FUNCTION__, "d_tor");
 	}
 
 	bool RouteAdd(const std::string& routePath, RouteFn routeFn) override
@@ -87,7 +93,7 @@ public:
 
 			for (size_t i = 0; i < m_params->threadsCount; ++i)
 			{
-				m_threads.emplace_back([this]() { m_io.run(); });
+				m_threads.emplace_back([this]() { m_io->run(); });
 			}
 
 			return true;
@@ -104,9 +110,9 @@ public:
 			m_acceptor.close();
 		}
 
-		if (!m_io.stopped())
+		if (!m_io->stopped())
 		{
-			m_io.stop();
+			m_io->stop();
 		}
 
 		for (auto& t : m_threads)
@@ -115,7 +121,7 @@ public:
 		}
 		m_threads.clear();
 
-		m_io.reset();
+		m_io->reset();
 	}
 
 private:
@@ -140,7 +146,7 @@ private:
 
 		HttpSession::Create(
 			std::move(routeFn),
-			m_params,
+			m_params, m_io,
 			std::move(m_socket)
 		)->Run();
 
@@ -168,7 +174,7 @@ private:
 	std::shared_ptr<std::mutex> m_mx = std::make_shared<std::mutex>();
 	std::shared_ptr<std::map<std::string, RouteFn>> m_routes = std::make_shared<std::map<std::string, RouteFn>>();
 
-	boost::asio::io_service m_io;
+	std::shared_ptr<boost::asio::io_service> m_io = std::make_shared<boost::asio::io_service>();
 	std::vector<std::thread> m_threads;
 	tcp::acceptor m_acceptor;
 	tcp::socket m_socket;
