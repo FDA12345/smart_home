@@ -13,8 +13,8 @@ if(WIN32)
 endif()
 
 add_compile_options(-Zi)
-add_compile_options("-MT$<$<CONFIG:Debug>:d>")
 add_link_options(-DEBUG)
+add_compile_options("-MT$<$<CONFIG:Debug>:d>")
 
 add_subdirectory(libs)
 add_subdirectory(apps)
