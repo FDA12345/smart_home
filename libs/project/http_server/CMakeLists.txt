@@ -21,11 +21,15 @@ set(HEADERS
 
 	src/stdafx.h
 	src/http_session.h
+	src/http_request.h
+	src/http_response.h
 )
 
 set(SOURCES
 	src/http_server.cpp
 	src/http_session.cpp
+	src/http_request.cpp
+	src/http_response.cpp
 )
 
 target_sources(http_server PRIVATE ${HEADERS} ${SOURCES})

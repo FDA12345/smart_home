@@ -1,179 +1,7 @@
 #include "stdafx.h"
 
-class HttpRequestImpl : public HttpRequest
-{
-public:
-	//Request
-	const std::string& Type() const override
-	{
-		return ReqRspType;
-	}
-
-	const std::string& Route() const override
-	{
-		return m_route;
-	}
-
-	const std::string_view& Payload() const override
-	{
-		return m_payloadView;
-	}
-
-
-	//HttpRequest
-	const std::string& Method() const override
-	{
-		return m_method;
-	}
-
-	int Version() const override
-	{
-		return m_version;
-	}
-
-	const HeaderList& Headers() const override
-	{
-		return m_headers;
-	}
-
-
-	//own methods
-	void Route(const std::string& route)
-	{
-		m_route = route;
-	}
-
-	void Payload(std::vector<char>&& payload)
-	{
-		m_payload = std::move(payload);
-
-		if (!m_payload.empty())
-		{
-			m_payloadView = std::string_view(&m_payload[0], m_payload.size());
-		}
-		else
-		{
-			m_payloadView = std::string_view();
-		}
-	}
-
-	void Method(const std::string& method)
-	{
-		m_method = method;
-	}
-
-	void Version(int version)
-	{
-		m_version = version;
-	}
-
-	HeaderList& Headers()
-	{
-		return m_headers;
-	}
-
-private:
-	std::string m_method;
-	int m_version = 11;
-	HeaderList m_headers;
-	std::string m_route;
-	std::vector<char> m_payload;
-	std::string_view m_payloadView;
-};
-
-class HttpResponseImpl : public HttpResponse
-{
-public:
-	const std::string& Type() const override
-	{
-		return ReqRspType;
-	}
-
-	//Response
-	const std::string& Route() const override
-	{
-		return m_route;
-	}
-
-	ResultCodes Result() const override
-	{
-		return m_result;
-	}
-
-	void Result(ResultCodes code) override
-	{
-		m_result = code;
-	}
-
-	const std::string& ResultMsg() const override
-	{
-		return m_resultMsg;
-	}
-
-	void ResultMsg(const std::string& msg) override
-	{
-		m_resultMsg = msg;
-	}
-
-	const std::string_view& Payload() const override
-	{
-		return m_payloadView;
-	}
-
-	void Payload(const std::string_view& payload) override
-	{
-		m_payload = { payload.data(), payload.data() + payload.size() };
-
-		if (!m_payload.empty())
-		{
-			m_payloadView = std::string_view(&m_payload[0], m_payload.size());
-		}
-		else
-		{
-			m_payloadView = std::string_view();
-		}
-	}
-
-
-	//HttpResponse
-	int Version() const override
-	{
-		return m_version;
-	}
-
-	void Version(int version) override
-	{
-		m_version = version;
-	}
-
-	const HeaderList& Headers() const override
-	{
-		return m_headers;
-	}
-
-	HeaderList& Headers() override
-	{
-		return m_headers;
-	}
-
-
-	//own methods
-	void Route(const std::string& route)
-	{
-		m_route = route;
-	}
-
-private:
-	int m_version = 11;
-	HeaderList m_headers;
-	std::string m_route;
-	std::vector<char> m_payload;
-	std::string_view m_payloadView;
-	ResultCodes m_result = ResultCodes::CODE_OK;
-	std::string m_resultMsg;
-};
-
-
+#include "http_request.h"
+#include "http_response.h"
 
 class HttpSessionImpl
 	: public HttpSession
@@ -279,69 +107,69 @@ private:
 
 		const auto& parserReq = m_parser->get();
 
-		HttpRequestImpl req;
-		req.Version(parserReq.version());
-		req.Method(parserReq.method_string().to_string());
-		req.Route(parserReq.target().to_string());
-		req.Payload({ &parserReq.body()[0], &parserReq.body()[parserReq.body().size()] });
+		auto req = CreateRequest();
+		req->Version(parserReq.version());
+		req->Method(parserReq.method_string().to_string());
+		req->Route(parserReq.target().to_string());
+		req->Payload({ &parserReq.body()[0], &parserReq.body()[parserReq.body().size()] });
 
 		for (const auto& f : parserReq)
 		{
-			req.Headers().emplace_back(f.name_string().to_string(), f.value().to_string());
+			req->Headers().emplace_back(f.name_string().to_string(), f.value().to_string());
 		}
 
-		auto serverErrorRsp = PrepareResponse(parserReq, CreateResponse({}), ResultCodes::CODE_INTERNAL_ERROR).second;
+		auto serverErrorRspMsg = PrepareResponseMsg(parserReq, CreateResponseMsg({}), ResultCodes::CODE_INTERNAL_ERROR).second;
 
-		HttpResponseImpl rsp;
-		if (!m_routeFn(req, rsp))
+		auto rsp = CreateResponse();
+		if (!m_routeFn(*req, *rsp))
 		{
-			WriteResponse(std::move(serverErrorRsp));
+			WriteResponseMsg(std::move(serverErrorRspMsg));
 			return;
 		}
 
 
-		if (rsp.Payload().empty())
+		if (rsp->Payload().empty())
 		{
-			auto&& preparedRsp = PrepareResponse(parserReq, CreateResponse(rsp.Headers()), rsp.Result());
-			WriteResponse(preparedRsp.first ? std::move(preparedRsp.second) : std::move(serverErrorRsp));
+			auto&& preparedRspMsg = PrepareResponseMsg(parserReq, CreateResponseMsg(rsp->Headers()), rsp->Result());
+			WriteResponseMsg(preparedRspMsg.first ? std::move(preparedRspMsg.second) : std::move(serverErrorRspMsg));
 		}
 		else
 		{
-			auto&& preparedRsp = PrepareResponse(parserReq, CreateResponse(rsp.Headers(), rsp.Payload()), rsp.Result());
-			if (preparedRsp.first)
+			auto&& preparedRspMsg = PrepareResponseMsg(parserReq, CreateResponseMsg(rsp->Headers(), rsp->Payload()), rsp->Result());
+			if (preparedRspMsg.first)
 			{
-				WriteResponse(std::move(preparedRsp.second));
+				WriteResponseMsg(std::move(preparedRspMsg.second));
 			}
 			else
 			{
-				WriteResponse(std::move(serverErrorRsp));
+				WriteResponseMsg(std::move(serverErrorRspMsg));
 			}
 		}
 	}
 
-	template <typename Response>
-	void WriteResponse(Response&& rsp)
+	template <typename ResponseMsg>
+	void WriteResponseMsg(ResponseMsg&& rspMsg)
 	{
-		logINFO(__FUNCTION__, "write response");
+		logINFO(__FUNCTION__, "write response msg");
 
-		using type = std::remove_reference_t<decltype(rsp)>;
-		std::shared_ptr<type::element_type> sharedRsp = std::move(rsp);
+		using type = std::remove_reference_t<decltype(rspMsg)>;
+		std::shared_ptr<type::element_type> sharedRspMsg = std::move(rspMsg);
 
-		beast_http::async_write(m_stream, *sharedRsp, std::bind(&HttpSessionImpl::OnWrite<decltype(sharedRsp)>,
-			shared_from_this(), sharedRsp, std::placeholders::_1, std::placeholders::_2));
+		beast_http::async_write(m_stream, *sharedRspMsg, std::bind(&HttpSessionImpl::OnWriteMsg<decltype(sharedRspMsg)>,
+			shared_from_this(), sharedRspMsg, std::placeholders::_1, std::placeholders::_2));
 	}
 
-	template <typename Response>
-	void OnWrite(const Response& rsp, const boost::system::error_code& ec, size_t transferred)
+	template <typename ResponseMsg>
+	void OnWriteMsg(const ResponseMsg& rspMsg, const boost::system::error_code& ec, size_t transferred)
 	{
-		logINFO(__FUNCTION__, "on write");
+		logINFO(__FUNCTION__, "on write msg");
 		if (ec)
 		{
 			logERROR(__FUNCTION__, "write error " << ec.message());
 			return;
 		}
 
-		if (rsp->need_eof())
+		if (rspMsg->need_eof())
 		{
 			Close();
 			return;
@@ -351,7 +179,7 @@ private:
 	}
 
 	template <typename Request, typename Response>
-	std::pair<bool, Response> PrepareResponse(const Request& req, Response&& rsp, const ResultCodes result)
+	std::pair<bool, Response> PrepareResponseMsg(const Request& req, Response&& rsp, const ResultCodes result)
 	{
 		bool ok = true;
 		rsp->set(beast_http::field::server, m_params->serverName);
@@ -374,9 +202,9 @@ private:
 		return std::make_pair(ok, std::move(rsp));
 	}
 
-	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponse(const HeaderList& headers, const std::string_view& body)
+	static std::unique_ptr<beast_http::message<false, beast_http::string_body>> CreateResponseMsg(const HeaderList& headers, const std::string_view& body)
 	{
-		auto rsp = CreateResponseImpl<beast_http::string_body>(headers);
+		auto rsp = CreateResponseMsgImpl<beast_http::string_body>(headers);
 
 		rsp->body() = body;
 		rsp->prepare_payload();
@@ -385,13 +213,13 @@ private:
 		return std::move(rsp);
 	}
 
-	static std::unique_ptr<beast_http::message<false, beast_http::empty_body>> CreateResponse(const HeaderList& headers)
+	static std::unique_ptr<beast_http::message<false, beast_http::empty_body>> CreateResponseMsg(const HeaderList& headers)
 	{
-		return CreateResponseImpl<beast_http::empty_body>(headers);
+		return CreateResponseMsgImpl<beast_http::empty_body>(headers);
 	}
 
 	template <typename BodyType>
-	static std::unique_ptr<beast_http::message<false, BodyType>> CreateResponseImpl(const HeaderList& headers)
+	static std::unique_ptr<beast_http::message<false, BodyType>> CreateResponseMsgImpl(const HeaderList& headers)
 	{
 		auto& rsp = std::make_unique<beast_http::message<false, BodyType>>();
 
