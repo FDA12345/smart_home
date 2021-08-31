@@ -180,7 +180,7 @@ public:
 
 			info0.lightLevel = rsp.fmt_0.light;
 
-			ChannelInfo0 c0{ std::move(info0), std::move(answer) };
+			ChannelInfo0 c0{ rsp.id, std::move(info0), std::move(answer) };
 			infos0.emplace_back(std::move(c0));
 			return true;
 		});
@@ -223,7 +223,7 @@ public:
 			info1.DisabledTillReboot_Lite = rsp.fmt_1.disabledLiteTillReboot;
 			info1.Disabled_Lite = rsp.fmt_1.disabledLiteInSettings;
 
-			ChannelInfo1 c1{ std::move(info1), std::move(answer) };
+			ChannelInfo1 c1{ rsp.id, std::move(info1), std::move(answer) };
 			infos1.emplace_back(std::move(c1));
 			return true;
 		});
@@ -257,7 +257,7 @@ public:
 			info2.FreeBindCells_Lite = rsp.fmt_2.freeCellsLite;
 			info2.FreeBindCells_Lite_F = rsp.fmt_2.freeCellsLiteF;
 
-			ChannelInfo2 c2{ std::move(info2), std::move(answer) };
+			ChannelInfo2 c2{ rsp.id, std::move(info2), std::move(answer) };
 			infos2.emplace_back(std::move(c2));
 			return true;
 		});

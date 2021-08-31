@@ -18,18 +18,21 @@ enum
 
 struct ChannelInfo0
 {
+	uint32_t id = 0;
 	DeviceInfo0 info0;
 	Answer answer;
 };
 
 struct ChannelInfo1
 {
+	uint32_t id = 0;
 	DeviceInfo1 info1;
 	Answer answer;
 };
 
 struct ChannelInfo2
 {
+	uint32_t id = 0;
 	DeviceInfo2 info2;
 	Answer answer;
 };

@@ -17,7 +17,7 @@ struct DonglePacket
 	}
 
 	Header header = Header::ST_FROM_ADAPTER;
-	DongleMode mode = DongleMode::TX;
+	noolite::DongleMode mode = noolite::DongleMode::TX;
 
 	union
 	{
