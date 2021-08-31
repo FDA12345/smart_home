@@ -1,10 +1,12 @@
 #include "stdafx.h"
 #include "json_http_server.h"
+#include "logger.h"
 
 #include <algorithm>
 
 #include "rapidjson/document.h"
-#include "rapidjson/prettywriter.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/error/en.h"
 
 std::string net_server::http::json::ReqRspType = "JSON";
 
@@ -169,22 +171,37 @@ private:
 
 	static bool ProcessJsonRequest(const net_server::RouteFn& routeFn, const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
 	{
+		logger::Ptr m_log = logger::Create();
 		rapidjson::Document doc;
-		doc.Parse(req.Payload().data(), req.Payload().size());
 
-		auto routeIt = doc.FindMember("route");
-		if (routeIt == doc.MemberEnd() || !routeIt->value.IsString())
+		try
 		{
-			return false;
+			doc.Parse(req.Payload().data(), req.Payload().size());
+			if (doc.HasParseError())
+			{
+				throw std::exception(("not parsed, pos " + std::to_string(doc.GetErrorOffset()) + ", msg " + rapidjson::GetParseError_En(doc.GetParseError())).c_str());
+			}
+
+			auto routeIt = doc.FindMember("route");
+			if (routeIt == doc.MemberEnd() || !routeIt->value.IsString())
+			{
+				return false;
+			}
+
+			auto payloadIt = doc.FindMember(rapidjson::Value{ "payload" });
+			if (payloadIt == doc.MemberEnd() || !payloadIt->value.IsString())
+			{
+				return false;
+			}
+
+			return ParseJsonRequest(routeFn, req, rsp, routeIt->value.GetString(), payloadIt->value.GetString());
+		}
+		catch (const std::exception& e)
+		{
+			logERROR(__FUNCTION__, "json parse error - " << e.what());
 		}
 
-		auto payloadIt = doc.FindMember("payload");
-		if (payloadIt == doc.MemberEnd() || !payloadIt->value.IsString())
-		{
-			return false;
-		}
-
-		return ParseJsonRequest(routeFn, req, rsp, routeIt->value.GetString(), payloadIt->value.GetString());
+		return false;
 	}
 
 	static bool ParseJsonRequest(const net_server::RouteFn& routeFn, const net_server::http::HttpRequest& req,
@@ -211,19 +228,19 @@ private:
 		addStringMemberFn(doc, request, "payload", std::string(jsonReq.Payload().data(), jsonReq.Payload().size()));
 
 		rapidjson::Value response(rapidjson::kObjectType);
-		addStringMemberFn(doc, request, "route", jsonRsp.Route());
-		addStringMemberFn(doc, request, "payload", std::string(jsonRsp.Payload().data(), jsonRsp.Payload().size()));
+		addStringMemberFn(doc, response, "route", jsonRsp.Route());
+		addStringMemberFn(doc, response, "payload", std::string(jsonRsp.Payload().data(), jsonRsp.Payload().size()));
 
 		rapidjson::Value result(rapidjson::kObjectType);
 		addStringMemberFn(doc, result, "resultMsg", jsonRsp.ResultMsg());
-		doc.AddMember("resultCode", size_t(jsonRsp.Result()), doc.GetAllocator());
+		addStringMemberFn(doc, result, "resultCode", GetResultAsText(jsonRsp.Result()));
 
 		doc.AddMember("request", std::move(request), doc.GetAllocator());
 		doc.AddMember("response", std::move(response), doc.GetAllocator());
 		doc.AddMember("result", std::move(result), doc.GetAllocator());
 
 		rapidjson::StringBuffer sb;
-		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(sb);
+		rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
 		doc.Accept(writer);
 
 		const std::string jsonText = sb.GetString();
@@ -232,6 +249,18 @@ private:
 		rsp.ResultMsg("OK");
 		rsp.Payload(jsonText);
 		return true;
+	}
+
+	static std::string GetResultAsText(const net_server::ResultCodes code)
+	{
+		switch (code)
+		{
+		case net_server::ResultCodes::CODE_OK:				return "OK";
+		case net_server::ResultCodes::CODE_NOT_FOUND:		return "NOT_FOUND";
+		case net_server::ResultCodes::CODE_INTERNAL_ERROR:	return "INTERNAL_ERROR";
+		case net_server::ResultCodes::CODE_BUSY:			return "BUSY";
+		}
+		return "UNKNOWN(" + std::to_string(size_t(code)) + ")";
 	}
 
 	static bool ValidateHeaders(const HeaderList& headers, const std::list<Header>& testHeaders)

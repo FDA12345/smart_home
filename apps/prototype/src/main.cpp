@@ -55,8 +55,8 @@ int main()
 	{
 		std::cout << std::string(req.Payload()) << std::endl;
 		rsp.Result(net_server::ResultCodes::CODE_NOT_FOUND);
-		rsp.ResultMsg("");
-		rsp.Payload("It's failed");
+		rsp.ResultMsg("route not registered");
+		//rsp.Payload("It's failed");
 		return true;
 	});
 
