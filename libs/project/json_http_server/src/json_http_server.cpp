@@ -151,10 +151,11 @@ public:
 private:
 	static bool OnHttpRoute(const net_server::RouteFn& routeFn, const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
 	{
+		return ProcessJsonRequest(routeFn, req, rsp);
+
 		if (req.Method() == "POST")
 		{
 			const auto& headers = req.Headers();
-
 			if (ValidateHeaders(headers,
 					{
 						{ "Content-Type", "application/json" },
@@ -171,6 +172,8 @@ private:
 
 	static bool ProcessJsonRequest(const net_server::RouteFn& routeFn, const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
 	{
+		return ParseJsonRequest(routeFn, req, rsp, "", "");
+
 		logger::Ptr m_log = logger::Create();
 		rapidjson::Document doc;
 
@@ -248,6 +251,7 @@ private:
 		rsp.Result(net_server::ResultCodes::CODE_OK);
 		rsp.ResultMsg("OK");
 		rsp.Payload(jsonText);
+		rsp.Headers().push_back({"Content-Type", "application/json"});
 		return true;
 	}
 

@@ -9,6 +9,10 @@
 #include <map>
 #include <optional>
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+
+
 const std::string g_routePrefix = "/smart_home";
 
 const uint16_t g_svcPort = 10001;
@@ -98,7 +102,7 @@ int main()
 			std::optional<noolite::ChannelInfo1> info1;
 			std::optional<noolite::ChannelInfo2> info2;
 		};
-		std::map<uint32_t, std::map<uint8_t, DeviceInfo>> devices;
+		std::map<uint8_t, std::map<uint32_t, DeviceInfo>> channels;
 
 		for (uint8_t channel = 0; channel < noolite::MAX_CHANNELS; ++channel)
 		{
@@ -107,7 +111,7 @@ int main()
 			{
 				for (const auto& info : infos0)
 				{
-					devices[info.id][channel].info0 = info;
+					channels[channel][info.id].info0 = info;
 				}
 
 				std::vector<noolite::ChannelInfo1> infos1;
@@ -115,7 +119,7 @@ int main()
 				{
 					for (const auto& info : infos1)
 					{
-						devices[info.id][channel].info1 = info;
+						channels[channel][info.id].info1 = info;
 					}
 
 					std::vector<noolite::ChannelInfo2> infos2;
@@ -123,21 +127,62 @@ int main()
 					{
 						for (const auto& info : infos2)
 						{
-							devices[info.id][channel].info2 = info;
+							channels[channel][info.id].info2 = info;
 						}
 					}
 				}
 			}
 		}
 
-		for (const auto& device : devices)
-		{
-			for (const auto& channel : device.second)
-			{
-			}
-		}
 
-		return false;
+		rapidjson::Document doc(rapidjson::kObjectType);
+
+		rapidjson::Value jsonChannels{rapidjson::kArrayType};
+		for (const auto& channel : channels)
+		{
+			rapidjson::Value jsonChannel(rapidjson::kArrayType);
+			for (const auto& device : channel.second)
+			{
+				rapidjson::Value d(rapidjson::kObjectType);
+				d.AddMember("id", device.first, doc.GetAllocator());
+
+				if (!device.second.info0)
+				{
+					d.AddMember("info0", rapidjson::Value{rapidjson::kNullType}, doc.GetAllocator());
+				}
+				else
+				{
+					rapidjson::Value devInfo0{ rapidjson::kObjectType };
+
+					rapidjson::Value info0{ rapidjson::kObjectType };
+					info0.AddMember("deviceType", device.second.info0->info0.deviceType, doc.GetAllocator());
+					info0.AddMember("firmware", device.second.info0->info0.firmware, doc.GetAllocator());
+					info0.AddMember("state", size_t(device.second.info0->info0.state), doc.GetAllocator());
+					info0.AddMember("bindMode", size_t(device.second.info0->info0.bindMode), doc.GetAllocator());
+					info0.AddMember("lightLevel", size_t(device.second.info0->info0.lightLevel), doc.GetAllocator());
+
+					devInfo0.AddMember("info0", std::move(info0), doc.GetAllocator());
+					devInfo0.AddMember("answer", size_t(device.second.info0->answer), doc.GetAllocator());
+
+					d.AddMember("info0", std::move(devInfo0), doc.GetAllocator());
+				}
+
+				jsonChannel.PushBack(std::move(d), doc.GetAllocator());
+			}
+
+			jsonChannels.PushBack(std::move(jsonChannel), doc.GetAllocator());
+		}
+		doc.AddMember("channels", std::move(jsonChannels), doc.GetAllocator());
+
+		rapidjson::StringBuffer sb;
+		rapidjson::Writer writer(sb);
+		doc.Accept(writer);
+
+		rsp.Result(net_server::ResultCodes::CODE_OK);
+		rsp.ResultMsg("OK");
+		rsp.Payload(sb.GetString());
+
+		return true;
 	});
 
 	server->Start();
