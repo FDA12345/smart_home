@@ -11,6 +11,11 @@ namespace noolite
 	USB DONGLE MTRF64-USB
 */
 
+enum
+{
+	MAX_CHANNELS = 64,
+};
+
 struct ChannelInfo0
 {
 	DeviceInfo0 info0;

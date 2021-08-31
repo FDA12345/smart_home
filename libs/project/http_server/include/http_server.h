@@ -2,6 +2,8 @@
 
 #include "net_server.h"
 
+#include <deque>
+
 namespace net_server
 {
 	namespace http

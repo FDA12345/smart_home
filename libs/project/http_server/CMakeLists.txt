@@ -8,8 +8,8 @@ if(WIN32)
 endif()
 
 target_link_libraries(http_server
-	PUBLIC net_server
-	PRIVATE boost logger
+	PUBLIC net_server boost
+	PRIVATE logger
 )
 
 target_include_directories(http_server PUBLIC include)
