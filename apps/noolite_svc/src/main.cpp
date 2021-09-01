@@ -12,6 +12,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 
+#include "json_object.h"
 
 const std::string g_routePrefix = "/smart_home";
 
@@ -77,6 +78,9 @@ private:
 
 int main()
 {
+	auto root = json::CreateRoot();
+	root->Tree()["aaa"]["bbb"]["ccc"];
+
 	const auto m_log = logger::Create();
 
 	const auto noo = noolite::CreateDongle();
