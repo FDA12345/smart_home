@@ -26,8 +26,8 @@ namespace json
 
 		virtual const Value& operator[] (const std::string& name) const = 0;
 
-		virtual Value& Insert(const std::string& name, Value&& value, const Value& before = NullValue()) = 0;
-		virtual Value& Insert(std::string&& name, Value&& value, const Value& before = NullValue()) = 0;
+		virtual Value& Insert(const std::string& name, const Value& before = NullValue()) = 0;
+		virtual Value& Insert(std::string&& name, const Value& before = NullValue()) = 0;
 
 		virtual Value& Remove(const std::string& name) = 0;
 	};
