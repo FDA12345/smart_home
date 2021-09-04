@@ -78,8 +78,8 @@ private:
 
 int main()
 {
-	auto root = json::CreateRoot();
-	root->Tree()["aaa"]["bbb"]["ccc"];
+	//auto root = json::CreateRoot();
+	//root->Tree()["aaa"]["bbb"]["ccc"];
 
 	const auto m_log = logger::Create();
 
