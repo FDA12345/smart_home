@@ -200,6 +200,8 @@ int main()
 }
 */
 
+#include "mqtt_broker.h"
+
 int main()
 {
 }

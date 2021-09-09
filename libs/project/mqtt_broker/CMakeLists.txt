@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.10)
 add_library(mqtt_broker)
 
 target_link_libraries(mqtt_broker
-	PRIVATE paho-mqtt-c broker logger
+	PUBLIC broker
+	PRIVATE paho-mqtt-c logger
 )
 
 target_include_directories(mqtt_broker PUBLIC include)
