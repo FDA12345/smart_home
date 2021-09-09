@@ -3,5 +3,6 @@
 
 serial::fths01::Ptr serial::fths01::Create(const Params& params)
 {
+	auto modbus = serial::modbus::Create(params);
 	return nullptr;
 }

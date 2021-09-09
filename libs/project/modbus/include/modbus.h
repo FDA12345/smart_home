@@ -11,8 +11,10 @@ namespace serial
 		public:
 			virtual ~Modbus() = default;
 
-			virtual bool Function_06() = 0;
-			virtual bool Function_03() = 0;
+			virtual bool ReadHoldingRegisters() = 0; //0x03
+
+			virtual bool WriteSingleRegister() = 0; //0x06
+			virtual bool WriteMultipleRegisters() = 0; //0x10
 		};
 
 		using Ptr = std::unique_ptr<Modbus>;

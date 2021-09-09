@@ -1,6 +1,6 @@
 #include "modbus.h"
 
-int modbus_version()
+serial::modbus::Ptr serial::modbus::Create(const Params& params)
 {
-	return 1234;
+	return nullptr;
 }
