@@ -201,7 +201,10 @@ int main()
 */
 
 #include "mqtt_broker.h"
+#include "broker_server.h"
 
 int main()
 {
+	auto&& broker = broker::mqtt::Create("127.0.0.1", "client123");
+	auto server = net_server::broker::CreateServer(std::move(broker));
 }
