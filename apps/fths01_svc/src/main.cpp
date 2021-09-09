@@ -206,6 +206,10 @@ int main()
 
 int main()
 {
+	serial::Params serialParams;
+
+	auto driver = serial::fths01::Create(serialParams);
+
 	auto&& broker = broker::mqtt::Create("127.0.0.1", "client123");
 	auto server = net_server::broker::CreateServer(std::move(broker));
 

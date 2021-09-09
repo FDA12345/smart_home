@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_library(finglai_fths01 src/finglai_fths01.cpp)
 
-target_link_libraries(finglai_fths01 PRIVATE logger modbus)
+target_link_libraries(finglai_fths01 INTERFACE serial PRIVATE logger modbus)
 target_include_directories(finglai_fths01 PUBLIC include)
 
 target_precompile_headers(finglai_fths01 PRIVATE src/stdafx.h)

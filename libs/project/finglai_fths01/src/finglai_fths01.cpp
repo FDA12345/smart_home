@@ -1,8 +1,7 @@
 #include "finglai_fths01.h"
+#include "modbus.h"
 
-#include "serial.h"
-
-int finglai_fths01_version()
+serial::fths01::Ptr serial::fths01::Create(const Params& params)
 {
-	return 12345;
+	return nullptr;
 }
