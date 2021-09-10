@@ -1,5 +1,6 @@
-mkdir curl-7.78.0/curl_build
-cd curl-7.78.0/curl_build
+cd curl-7.78.0
+mkdir curl_build
+cd curl_build
 
 cmake .. -B build_x32
 

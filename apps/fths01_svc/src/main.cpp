@@ -207,8 +207,12 @@ int main()
 
 #include <thread>
 
+#include <curl/curl.h>
+
 int main()
 {
+	CURL* curl = curl_easy_init();
+
 	logger::SetLogLevel(logger::LogLevel::Trace);
 
 	auto m_log = logger::Create();
