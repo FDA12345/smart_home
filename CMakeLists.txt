@@ -3,6 +3,13 @@ project(SmartHome)
 
 set(SDK "${CMAKE_SOURCE_DIR}/sdk")
 
+if("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "x64")
+	set(PLATFORM "x64")
+else()
+	set(PLATFORM "x32")
+endif()
+message("Build platform is ${PLATFORM}")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 #set(CMAKE_DEBUG_POSTFIX d)

@@ -7,9 +7,18 @@ endif()
 
 target_compile_options(curl INTERFACE "-DCURL_STATICLIB")
 
-set_target_properties(curl PROPERTIES
-	IMPORTED_LOCATION "${SDK}/${CURL}/curl_build/build_x32/lib/Release/libcurl${CMAKE_STATIC_LIBRARY_SUFFIX}"
-	IMPORTED_LOCATION_DEBUG "${SDK}/${CURL}/curl_build/build_x32/lib/Debug/libcurl-d${CMAKE_STATIC_LIBRARY_SUFFIX}"
-	IMPORTED_CONFIGURATIONS "RELEASE;DEBUG"
-)
+if(PLATFORM STREQUAL "x32")
+	set_target_properties(curl PROPERTIES
+		IMPORTED_LOCATION "${SDK}/${CURL}/curl_build/build_x32/lib/Release/libcurl${CMAKE_STATIC_LIBRARY_SUFFIX}"
+		IMPORTED_LOCATION_DEBUG "${SDK}/${CURL}/curl_build/build_x32/lib/Debug/libcurl-d${CMAKE_STATIC_LIBRARY_SUFFIX}"
+		IMPORTED_CONFIGURATIONS "RELEASE;DEBUG"
+	)
+else()
+	set_target_properties(curl PROPERTIES
+		IMPORTED_LOCATION "${SDK}/${CURL}/curl_build/build_x64/lib/Release/libcurl${CMAKE_STATIC_LIBRARY_SUFFIX}"
+		IMPORTED_LOCATION_DEBUG "${SDK}/${CURL}/curl_build/build_x64/lib/Debug/libcurl-d${CMAKE_STATIC_LIBRARY_SUFFIX}"
+		IMPORTED_CONFIGURATIONS "RELEASE;DEBUG"
+	)
+endif()
+
 target_include_directories(curl INTERFACE "${SDK}/${CURL}/include")
