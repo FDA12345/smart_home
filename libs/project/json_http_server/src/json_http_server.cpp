@@ -220,8 +220,8 @@ private:
 		static auto addStringMemberFn = [](auto& doc, auto& root, const std::string& name, const std::string& value)
 		{
 			root.AddMember(
-				rapidjson::Value{ name.c_str(), name.size(), doc.GetAllocator() },
-				rapidjson::Value{ value.c_str(), value.size(), doc.GetAllocator() },
+				rapidjson::Value{ name.c_str(), rapidjson::SizeType(name.size()), doc.GetAllocator() },
+				rapidjson::Value{ value.c_str(), rapidjson::SizeType(value.size()), doc.GetAllocator() },
 				doc.GetAllocator()
 			);
 		};
