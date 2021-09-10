@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_library(serial src/serial.cpp)
 
-target_link_libraries(serial PUBLIC boost PRIVATE logger)
+target_link_libraries(serial PRIVATE logger boost)
 target_include_directories(serial PUBLIC include)
 
 target_precompile_headers(serial PRIVATE src/stdafx.h)
