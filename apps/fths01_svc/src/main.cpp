@@ -205,6 +205,8 @@ int main()
 #include "finglai_fths01.h"
 #include "logger.h"
 
+#include <thread>
+
 int main()
 {
 	logger::SetLogLevel(logger::LogLevel::Trace);
@@ -230,6 +232,8 @@ int main()
 			{
 				logERROR(__FUNCTION__, "read error, address " << address);
 			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 
 		driver->Close();

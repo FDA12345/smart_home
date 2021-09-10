@@ -100,14 +100,15 @@ public:
 			union
 			{
 				uint8_t bytes[SERIAL_ADU_SIZE] = {0};
-			};
 
-			struct
-			{
-				uint8_t deviceAddress = 0;
-				uint8_t function = 0;
-				uint16_t bytesTotal = 0;
-				uint16_t regs[MAX_REGS_TOTAL];
+				struct
+				{
+					uint8_t deviceAddress;
+					uint8_t function;
+					uint8_t bytesTotal;
+					uint16_t regs[MAX_REGS_TOTAL];
+					uint16_t crc;
+				};
 			};
 		};
 #pragma pack(push)
@@ -120,8 +121,8 @@ public:
 		Request req = { 0 };
 		req.deviceAddress = deviceAddress;
 		req.function = 0x03;
-		req.address = address;
-		req.total = total;
+		req.address = htons(address);
+		req.total = htons(total);
 		req.crc = CRC16(reinterpret_cast<uint8_t*>(&req), sizeof(req) - sizeof(req.crc));
 
 		if (m_serial->Write(reinterpret_cast<const char*>(&req.deviceAddress), sizeof(req)) != sizeof(req))
@@ -155,7 +156,7 @@ public:
 			return false;
 		}
 
-		if (!readFieldFn(rsp.bytesTotal, req.total * 2))
+		if (!readFieldFn(rsp.bytesTotal, total * 2))
 		{
 			return false;
 		}
@@ -167,12 +168,20 @@ public:
 		rspPtr += rsp.bytesTotal;
 
 		uint16_t crc = 0;
-		if (!readFieldFn(crc, CRC16(rsp.bytes, rspPtr - startRspPtr)))
+		if (m_serial->Read(reinterpret_cast<char*>(&crc), sizeof(crc)) != sizeof(crc))
+		{
+			return false;
+		}
+		if (crc != CRC16(rsp.bytes, rspPtr - startRspPtr))
 		{
 			return false;
 		}
 
-		memcpy(dst, rsp.regs, total * 2);
+		for (size_t i = 0; i < total; ++i)
+		{
+			dst[i] = htons(rsp.regs[i]);
+		}
+
 		return true;
 	}
 
@@ -186,6 +195,11 @@ public:
 		return false;
 	}
 
+private:
+	static uint16_t htons(uint16_t v)
+	{
+		return ((0xFF & v) << 8) | ((v >> 8) & 0xFF);
+	}
 
 private:
 	serial::Ptr m_serial;

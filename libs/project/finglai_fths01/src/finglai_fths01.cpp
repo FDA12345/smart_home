@@ -60,10 +60,10 @@ public:
 					uint16_t humi;
 				};
 				uint16_t words[2];
-			} data;
+			} data{0};
 #pragma pack(pop)
 
-			if (m_modbus->ReadHoldingRegisters(0, address, 2, data.words))
+			if (m_modbus->ReadHoldingRegisters(address, 0, 2, data.words))
 			{
 				telemetry.temperature = data.temp / 10.f;
 				telemetry.humidity = data.humi / 10.f;
