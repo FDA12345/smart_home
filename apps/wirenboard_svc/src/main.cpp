@@ -215,15 +215,13 @@ int main()
 
 	auto m_log = logger::Create();
 
-	/*
-	auto driver = serial::fths01::Create();
+	auto driver = serial::wirenboard::Create();
 
-	if (driver->Open("COM6"))
+	if (driver->Open("COM7"))
 	{
 
 		driver->Close();
 	}
-	*/
 
 	/*
 	auto&& broker = broker::mqtt::Create("127.0.0.1", "client123");

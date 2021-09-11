@@ -1,6 +1,10 @@
 #include "wirenboard.h"
+#include "modbus.h"
 
-int wirenboard_version()
+using namespace serial::modbus;
+using namespace serial::wirenboard;
+
+serial::wirenboard::Ptr serial::wirenboard::Create()
 {
-	return 123;
+	return nullptr;
 }
