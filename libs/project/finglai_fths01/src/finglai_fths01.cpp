@@ -1,6 +1,8 @@
 #include "finglai_fths01.h"
 #include "modbus.h"
 
+#include "logger.h"
+
 using namespace serial::fths01;
 
 class Fths01Impl : public Fths01
@@ -48,39 +50,51 @@ public:
 
 	bool ReadTelemetry(uint8_t address, Telemetry& telemetry) override
 	{
-		if (m_modbus)
+		if (!m_modbus)
 		{
+			return false;
+		}
+
 #pragma pack(push)
 #pragma pack(1)
-			union
+		union
+		{
+			struct
 			{
-				struct
-				{
-					uint16_t temp;
-					uint16_t humi;
-				};
-				uint16_t words[2];
-			} data{0};
+				int16_t temp;
+				int16_t humi;
+			};
+
+			uint16_t words[2];
+		} data {0};
 #pragma pack(pop)
 
-			if (m_modbus->ReadHoldingRegisters(address, 0, 2, data.words))
-			{
-				telemetry.temperature = data.temp / 10.f;
-				telemetry.humidity = data.humi / 10.f;
+		if (m_modbus->ReadHoldingRegisters(address, 0, 2, data.words))
+		{
+			telemetry.temperature = data.temp / 10.f;
+			telemetry.humidity = data.humi / 10.f;
 
-				return true;
-			}
+			return true;
 		}
 
 		return false;
 	}
 
-	bool WriteSettings(uint8_t address, Settings& settings) override
+	bool WriteSettings(uint8_t address, const Settings& settings) override
 	{
-		return false;
+		if (!m_modbus)
+		{
+			return false;
+		}
+
+		uint16_t value = *reinterpret_cast<const uint16_t*>(&settings);
+
+		logWARN(__FUNCTION__, "в описании FTHS01 в комангде 06 modbus другая структура. могут быть проблемы");
+		return m_modbus->WriteSingleRegister(address, 0, value);
 	}
 
 private:
+	const logger::Ptr m_log;
 	serial::modbus::Ptr m_modbus;
 };
 

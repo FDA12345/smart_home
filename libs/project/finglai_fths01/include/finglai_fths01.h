@@ -10,7 +10,7 @@ namespace serial
 			float humidity = 0.f;
 		};
 
-		enum class BaudRate
+		enum class BaudRate : uint8_t
 		{
 			_1200 = 3,
 			_2400,
@@ -34,7 +34,7 @@ namespace serial
 			virtual void Close() = 0;
 
 			virtual bool ReadTelemetry(uint8_t address, Telemetry& telemetry) = 0;
-			virtual bool WriteSettings(uint8_t address, Settings& settings) = 0;
+			virtual bool WriteSettings(uint8_t address, const Settings& settings) = 0;
 		};
 
 		using Ptr = std::unique_ptr<Fths01>;

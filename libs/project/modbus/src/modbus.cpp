@@ -4,6 +4,10 @@ using namespace serial;
 
 namespace
 {
+	constexpr uint16_t SERIAL_ADU_SIZE = 256;
+	constexpr uint16_t MAX_PDU_SIZE = SERIAL_ADU_SIZE - 1 - 1 - 2 - 2;
+	constexpr uint16_t MAX_REGS_TOTAL = MAX_PDU_SIZE >> 1;
+
 
 	//https://stackoverflow.com/questions/19347685/calculating-modbus-rtu-crc-16
 	uint16_t CRC16(const uint8_t *nData, uint16_t wLength)
@@ -77,12 +81,8 @@ public:
 
 	bool ReadHoldingRegisters(uint8_t deviceAddress, uint16_t address, uint16_t total, uint16_t* dst) override
 	{
-
 		//https://modbus.org/docs/Modbus_Application_Protocol_V1_1b.pdf
-
-		constexpr uint16_t SERIAL_ADU_SIZE = 256;
-		constexpr uint16_t MAX_PDU_SIZE = SERIAL_ADU_SIZE - 1 - 1 - 2 - 2;
-		constexpr uint16_t MAX_REGS_TOTAL = MAX_PDU_SIZE >> 1;
+		//https://dghcorp.com/modbus-overview/#funct03
 
 #pragma pack(push)
 #pragma pack(1)
@@ -185,15 +185,105 @@ public:
 		return true;
 	}
 
-	bool WriteSingleRegister() override
+	bool WriteSingleRegister(uint8_t deviceAddress, uint16_t address, uint16_t value) override
 	{
-		return false;
+		//https://modbus.org/docs/Modbus_Application_Protocol_V1_1b.pdf
+		//https://dghcorp.com/modbus-overview/#funct06
+
+#pragma pack(push)
+#pragma pack(1)
+		struct Request
+		{
+			uint8_t deviceAddress = 0;
+			uint8_t function = 0;
+			uint16_t address = 0;
+			uint16_t value = 0;
+			uint16_t crc = 0;
+		};
+
+		struct Response
+		{
+			union
+			{
+				uint8_t bytes[SERIAL_ADU_SIZE] = { 0 };
+
+				struct
+				{
+					uint8_t deviceAddress;
+					uint8_t function;
+					uint16_t address;
+					uint16_t value;
+					uint16_t crc;
+				};
+			};
+		};
+#pragma pack(push)
+
+		Request req = { 0 };
+		req.deviceAddress = deviceAddress;
+		req.function = 0x06;
+		req.address = htons(address);
+		req.value = htons(value);
+		req.crc = CRC16(reinterpret_cast<uint8_t*>(&req), sizeof(req) - sizeof(req.crc));
+
+		if (m_serial->Write(reinterpret_cast<const char*>(&req.deviceAddress), sizeof(req)) != sizeof(req))
+		{
+			return false;
+		}
+
+		Response rsp;
+
+		char* rspPtr = reinterpret_cast<char*>(rsp.bytes);
+		const char* startRspPtr = rspPtr;
+
+		static auto readFieldFn = [this, &rspPtr](auto& field, auto mustValue) -> bool
+		{
+			if ((m_serial->Read(rspPtr, sizeof(field)) != sizeof(field)) || (field != mustValue))
+			{
+				return false;
+			}
+
+			rspPtr += sizeof(field);
+			return true;
+		};
+
+		if (!readFieldFn(rsp.deviceAddress, deviceAddress))
+		{
+			return false;
+		}
+
+		if (!readFieldFn(rsp.function, 0x06))
+		{
+			return false;
+		}
+
+		if (!readFieldFn(rsp.address, htons(address)))
+		{
+			return false;
+		}
+
+		if (!readFieldFn(rsp.value, htons(value)))
+		{
+			return false;
+		}
+
+		uint16_t crc = 0;
+		if (m_serial->Read(reinterpret_cast<char*>(&crc), sizeof(crc)) != sizeof(crc))
+		{
+			return false;
+		}
+		if (crc != CRC16(rsp.bytes, rspPtr - startRspPtr))
+		{
+			return false;
+		}
+
+		return true;
 	}
 
-	bool WriteMultipleRegisters() override
-	{
-		return false;
-	}
+	//bool WriteMultipleRegisters() override
+	//{
+	//	return false;
+	//}
 
 private:
 	static uint16_t htons(uint16_t v)
