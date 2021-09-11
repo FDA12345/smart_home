@@ -93,7 +93,7 @@ public:
 	}
 
 private:
-	const logger::Ptr m_log;
+	const logger::Ptr m_log = logger::Create();
 	serial::modbus::Ptr m_modbus;
 };
 

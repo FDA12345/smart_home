@@ -219,6 +219,13 @@ int main()
 
 	if (driver->Open("COM7"))
 	{
+		serial::wirenboard::WB_MAP3H wbMap3H = { 0 };
+
+		if (driver->Read(14, wbMap3H))
+		{
+			logINFO(__FUNCTION__, "p_total " << wbMap3H.p_total.all << ", p_l1 " << wbMap3H.p_total.l1
+				<< ", p_l2 " << wbMap3H.p_total.l2 << ", p_l3 " << wbMap3H.p_total.l3);
+		}
 
 		driver->Close();
 	}
