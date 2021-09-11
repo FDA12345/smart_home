@@ -202,7 +202,7 @@ int main()
 
 #include "mqtt_broker.h"
 #include "broker_server.h"
-#include "finglai_fths01.h"
+#include "wirenboard.h"
 #include "logger.h"
 
 #include <thread>
@@ -215,31 +215,15 @@ int main()
 
 	auto m_log = logger::Create();
 
+	/*
 	auto driver = serial::fths01::Create();
 
 	if (driver->Open("COM6"))
 	{
-		std::vector<int> devices{ 50, 51, 52, 53 };
-
-		for (const auto address : devices)
-		{
-			logINFO(__FUNCTION__, "reading address " << address);
-
-			serial::fths01::Telemetry telemetry = { 0 };
-			if (driver->ReadTelemetry(address, telemetry))
-			{
-				logINFO(__FUNCTION__, "address:" << address << ", temp: " << telemetry.temperature << ", humi: " << telemetry.humidity);
-			}
-			else
-			{
-				logERROR(__FUNCTION__, "read error, address " << address);
-			}
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-		}
 
 		driver->Close();
 	}
+	*/
 
 	/*
 	auto&& broker = broker::mqtt::Create("127.0.0.1", "client123");

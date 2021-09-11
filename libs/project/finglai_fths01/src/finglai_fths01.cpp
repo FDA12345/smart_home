@@ -1,6 +1,5 @@
 #include "finglai_fths01.h"
 #include "modbus.h"
-
 #include "logger.h"
 
 using namespace serial::fths01;

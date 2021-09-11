@@ -30,7 +30,7 @@ namespace serial
 		public:
 			virtual ~Fths01() = default;
 
-			virtual bool Open(const std::string& serialName, BaudRate baudRate) = 0;
+			virtual bool Open(const std::string& serialName, BaudRate baudRate = BaudRate::_9600) = 0;
 			virtual void Close() = 0;
 
 			virtual bool ReadTelemetry(uint8_t address, Telemetry& telemetry) = 0;

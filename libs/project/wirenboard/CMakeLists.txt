@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_library(wirenboard src/wirenboard.cpp)
 
-target_link_libraries(wirenboard INTERFACE serial PRIVATE modbus)
+target_link_libraries(wirenboard PRIVATE modbus)
 target_include_directories(wirenboard PUBLIC include)
 
 target_precompile_headers(wirenboard PRIVATE src/stdafx.h)
