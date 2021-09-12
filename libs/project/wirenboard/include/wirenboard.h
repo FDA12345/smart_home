@@ -8,18 +8,18 @@ namespace serial
 		{
 			struct
 			{
-				float all = 0.f;
-				float l1 = 0.f;
-				float l2 = 0.f;
-				float l3 = 0.f;
+				double all = 0.f;
+				double l1 = 0.f;
+				double l2 = 0.f;
+				double l3 = 0.f;
 			} p_total;
 
 			struct
 			{
-				float all = 0.f;
-				float l1 = 0.f;
-				float l2 = 0.f;
-				float l3 = 0.f;
+				double all = 0.f;
+				double l1 = 0.f;
+				double l2 = 0.f;
+				double l3 = 0.f;
 			} p_moment;
 
 			struct

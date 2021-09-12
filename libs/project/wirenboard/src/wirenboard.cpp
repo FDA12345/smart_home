@@ -67,8 +67,32 @@ public:
 		constexpr uint16_t l2_u_addr = 0x10da;
 		constexpr uint16_t l3_u_addr = 0x10db;
 
-		if (!QueryNormedFloatValues(address, total_power_addr, 4, &wbMap3H.p_total.all,
-				&std::vector<float>{ 3.125e-05f, 3.125e-05f, 3.125e-05f, 3.125e-05f }[0]))
+		if (!QueryNormedValues<uint64_t>(address, total_power_addr, 4, true, &wbMap3H.p_total.all,
+				&std::vector<double>{ 3.125e-05, 3.125e-05, 3.125e-05, 3.125e-05 }[0]))
+		{
+			return false;
+		}
+
+		if (!QueryNormedValues<int16_t>(address, l1_voltage_angle, 3, false, &wbMap3H.angle.l1,
+			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
+		{
+			return false;
+		}
+
+		if (!QueryNormedValues<int16_t>(address, l1_phase_angle, 3, false, &wbMap3H.phase.l1,
+			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
+		{
+			return false;
+		}
+
+		if (!QueryNormedValues<int32_t>(address, moment_power, 4, false, &wbMap3H.p_moment.all,
+			&std::vector<double>{ 6.10352e-05, 1.52588e-05, 1.52588e-05, 1.52588e-05 }[0]))
+		{
+			return false;
+		}
+
+		if (!QueryNormedValues<uint16_t>(address, l1_u_addr, 3, false, &wbMap3H.u.l1,
+			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
 		{
 			return false;
 		}
@@ -77,9 +101,35 @@ public:
 	}
 
 private:
-	bool QueryNormedFloatValues(uint8_t deviceAddress, uint16_t address, uint16_t total, float* dst, const float* norms)
+	template <typename RegType, typename ValueType, typename ScaleType>
+	bool QueryNormedValues(uint8_t deviceAddress, uint16_t address, uint16_t total, bool littleEndian, ValueType* dst, const ScaleType* norms)
 	{
-		return false;
+		constexpr size_t typeSize = sizeof(RegType);
+		const uint16_t regsTotal = typeSize * total / 2;
+
+		std::vector<RegType> data(total);
+		if (!m_modbus->ReadHoldingRegisters(deviceAddress, address, regsTotal, reinterpret_cast<uint16_t*>(&data[0])))
+		{
+			return false;
+		}
+
+		for (size_t i = 0; i < total; ++i)
+		{
+			if (!littleEndian)
+			{
+				uint8_t* b1 = reinterpret_cast<uint8_t*>(&data[i]);
+				uint8_t* b2 = reinterpret_cast<uint8_t*>(&data[i + 1]) - 1;
+
+				for (size_t j = 0; j < typeSize / 2; ++j)
+				{
+					std::swap(*(b1++), *(b2--));
+				}
+			}
+
+			dst[i] = ValueType(data[i]) * norms[i];
+		}
+
+		return true;
 	}
 
 private:
