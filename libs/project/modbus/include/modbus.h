@@ -6,6 +6,24 @@ namespace serial
 {
 	namespace modbus
 	{
+		template <typename T>
+		T RevertBytesOrder(const T value)
+		{
+			constexpr size_t typeSize = sizeof(value);
+
+			T result = value;
+
+			uint8_t* b1 = reinterpret_cast<uint8_t*>(&result);
+			uint8_t* b2 = b1 + typeSize - 1;
+
+			for (size_t j = 0; j < typeSize / 2; ++j)
+			{
+				std::swap(*b1++, *b2--);
+			}
+
+			return result;
+		}
+
 		class Modbus
 		{
 		public:

@@ -121,8 +121,8 @@ public:
 		Request req = { 0 };
 		req.deviceAddress = deviceAddress;
 		req.function = 0x03;
-		req.address = htons(address);
-		req.total = htons(total);
+		req.address = modbus::RevertBytesOrder(address);
+		req.total = modbus::RevertBytesOrder(total);
 		req.crc = CRC16(reinterpret_cast<uint8_t*>(&req), sizeof(req) - sizeof(req.crc));
 
 		if (m_serial->Write(reinterpret_cast<const char*>(&req.deviceAddress), sizeof(req)) != sizeof(req))
@@ -177,10 +177,13 @@ public:
 			return false;
 		}
 
+		/*
 		for (size_t i = 0; i < total; ++i)
 		{
-			dst[i] = htons(rsp.regs[i]);
+			dst[i] = modbus::RevertBytesOrder(rsp.regs[i]);
 		}
+		*/
+		memcpy(dst, rsp.regs, rsp.bytesTotal);
 
 		return true;
 	}
@@ -222,8 +225,8 @@ public:
 		Request req = { 0 };
 		req.deviceAddress = deviceAddress;
 		req.function = 0x06;
-		req.address = htons(address);
-		req.value = htons(value);
+		req.address = modbus::RevertBytesOrder(address);
+		req.value = value;
 		req.crc = CRC16(reinterpret_cast<uint8_t*>(&req), sizeof(req) - sizeof(req.crc));
 
 		if (m_serial->Write(reinterpret_cast<const char*>(&req.deviceAddress), sizeof(req)) != sizeof(req))
@@ -257,12 +260,12 @@ public:
 			return false;
 		}
 
-		if (!readFieldFn(rsp.address, htons(address)))
+		if (!readFieldFn(rsp.address, modbus::RevertBytesOrder(address)))
 		{
 			return false;
 		}
 
-		if (!readFieldFn(rsp.value, htons(value)))
+		if (!readFieldFn(rsp.value, value))
 		{
 			return false;
 		}
@@ -278,17 +281,6 @@ public:
 		}
 
 		return true;
-	}
-
-	//bool WriteMultipleRegisters() override
-	//{
-	//	return false;
-	//}
-
-private:
-	static uint16_t htons(uint16_t v)
-	{
-		return ((0xFF & v) << 8) | ((v >> 8) & 0xFF);
 	}
 
 private:

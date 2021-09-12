@@ -70,31 +70,41 @@ public:
 		constexpr uint16_t l2_u_addr = 0x10da;
 		constexpr uint16_t l3_u_addr = 0x10db;
 
-		if (!QueryNormedValues<uint64_t>(address, total_power_addr, 4, true, &wbMap3H.p_total.all,
-				&std::vector<double>{ 3.125e-05, 3.125e-05, 3.125e-05, 3.125e-05 }[0]))
-		{
-			return false;
+		queryNormedValuesFromUInt64(
+			queryModbusFunc3Int64Values(dev_addr, total_power_addr, true, 4),
+			new MutableDouble[]{
+					data.p_total,
+					data.l1_p,
+					data.l2_p,
+					data.l3_p,
+			},
+			new double[] {
+			3.125e-05,
+				3.125e-05,
+				3.125e-05,
+				3.125e-05,
 		}
+		);
 
-		if (!QueryNormedValues<int16_t>(address, l1_voltage_angle, 3, true, &wbMap3H.angle.l1,
+		if (!QueryNormedValues<int16_t>(address, l1_voltage_angle, 3, false, &wbMap3H.angle.l1,
 			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
 		{
 			return false;
 		}
 
-		if (!QueryNormedValues<int16_t>(address, l1_phase_angle, 3, true, &wbMap3H.phase.l1,
+		if (!QueryNormedValues<int16_t>(address, l1_phase_angle, 3, false, &wbMap3H.phase.l1,
 			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
 		{
 			return false;
 		}
 
-		if (!QueryNormedValues<int32_t>(address, moment_power, 4, true, &wbMap3H.p_moment.all,
+		if (!QueryNormedValues<int32_t>(address, moment_power, 4, false, &wbMap3H.p_moment.all,
 			&std::vector<double>{ 6.10352e-05, 1.52588e-05, 1.52588e-05, 1.52588e-05 }[0]))
 		{
 			return false;
 		}
 
-		if (!QueryNormedValues<uint16_t>(address, l1_u_addr, 3, true, &wbMap3H.u.l1,
+		if (!QueryNormedValues<uint16_t>(address, l1_u_addr, 3, false, &wbMap3H.u.l1,
 			&std::vector<float>{ 0.01f, 0.01f, 0.01f }[0]))
 		{
 			return false;
@@ -103,37 +113,85 @@ public:
 		return false;
 	}
 
-private:
-	template <typename RegType, typename ValueType, typename ScaleType>
-	bool QueryNormedValues(uint8_t deviceAddress, uint16_t address, uint16_t total, bool littleEndian, ValueType* dst, const ScaleType* norms)
+private: 
+	template <typename ValueType, typename ScaleType>
+	static void NormedValuesFromUInt64(uint64_t* dataFrom, size_t dataTotal, ValueType* dataTo, ScaleType *scales)
 	{
-		constexpr size_t typeSize = sizeof(RegType);
-		const uint16_t regsTotal = typeSize * total / 2;
-
-		std::vector<RegType> data(total);
-		if (!m_modbus->ReadHoldingRegisters(deviceAddress, address, regsTotal, reinterpret_cast<uint16_t*>(&data[0])))
-		{
-			return false;
+		for (size_t i = 0; i < dataTotal; ++i) {
+			data_to[i].setValue(queryNormedValueFromUInt64
+			(data_from[i], scales[i]));
 		}
-
-		for (size_t i = 0; i < total; ++i)
-		{
-			if (!littleEndian)
-			{
-				uint8_t* b1 = reinterpret_cast<uint8_t*>(&data[i]);
-				uint8_t* b2 = b1 + typeSize - 1;
-
-				for (size_t j = 0; j < typeSize / 2; ++j)
-				{
-					std::swap(*(b1++), *(b2--));
-				}
-			}
-
-			dst[i] = ValueType(data[i]) * norms[i];
-		}
-
-		return true;
 	}
+
+	static uint64_t DecodeUInt64(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3,
+			uint8_t b4, uint8_t b5, uint8_t b6, uint8_t b7,	bool little_endian)
+	{
+		uint64_t l = 0;
+
+		if (little_endian) {
+			l =
+				((uint64_t)b1 & 0xFF) |
+				(((uint64_t)b0 & 0xFF) << 8) |
+				(((uint64_t)b3 & 0xFF) << 16) |
+				(((uint64_t)b2 & 0xFF) << 24) |
+				(((uint64_t)b5 & 0xFF) << 32) |
+				(((uint64_t)b4 & 0xFF) << 40) |
+				(((uint64_t)b7 & 0xFF) << 48) |
+				(((uint64_t)b6 & 0xFF) << 56);
+		}
+		else {
+			l =
+				((uint64_t)b7 & 0xFF) |
+				(((uint64_t)b6 & 0xFF) << 8) |
+				(((uint64_t)b5 & 0xFF) << 16) |
+				(((uint64_t)b4 & 0xFF) << 24) |
+				(((uint64_t)b3 & 0xFF) << 32) |
+				(((uint64_t)b2 & 0xFF) << 40) |
+				(((uint64_t)b1 & 0xFF) << 48) |
+				(((uint64_t)b0 & 0xFF) << 56);
+		};
+
+		return l;
+	}
+
+	static uint32_t DecodeInt32(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3, bool little_endian)
+	{
+		uint32_t l = 0;
+
+		if (little_endian) {
+			l = (uint32_t)
+				(((uint64_t)b1 & 0xFF) |
+				(((uint64_t)b0 & 0xFF) << 8) |
+				(((uint64_t)b3 & 0xFF) << 16) |
+				(((uint64_t)b2 & 0xFF) << 24));
+		}
+		else {
+			l = (uint32_t)
+				(((uint64_t)b3 & 0xFF) |
+				(((uint64_t)b2 & 0xFF) << 8) |
+				(((uint64_t)b1 & 0xFF) << 16) |
+				(((uint64_t)b0 & 0xFF) << 24));
+		}
+		return l;
+	}
+
+	static uint16_t DecodeShort(uint8_t b0, uint8_t b1, bool little_endian)
+	{
+		uint16_t s = 0;
+
+		if (little_endian) {
+			s = (uint16_t)
+				(((uint64_t)b1 & 0xFF) |
+				(((uint64_t)b0 & 0xFF) << 8));
+		}
+		else {
+			s = (uint16_t)
+				(((uint64_t)b1 & 0xFF) |
+				(((uint64_t)b0 & 0xFF) << 8));
+		}
+		return s;
+	}
+
 
 private:
 	const logger::Ptr m_log = logger::Create();
