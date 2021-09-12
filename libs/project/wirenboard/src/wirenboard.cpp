@@ -20,13 +20,16 @@ public:
 		params.characterSize = 8;
 		params.baudRate = baudRate;
 
+		//params.readTimeoutMs = 250;
+		//params.writeTimeoutMs = 250;
+
 		m_modbus = serial::modbus::Create(params);
 		if (!m_modbus)
 		{
 			return false;
 		}
 
-		return false;
+		return m_modbus->Open();
 	}
 
 	void Close() override
@@ -73,26 +76,26 @@ public:
 			return false;
 		}
 
-		if (!QueryNormedValues<int16_t>(address, l1_voltage_angle, 3, false, &wbMap3H.angle.l1,
+		if (!QueryNormedValues<int16_t>(address, l1_voltage_angle, 3, true, &wbMap3H.angle.l1,
 			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
 		{
 			return false;
 		}
 
-		if (!QueryNormedValues<int16_t>(address, l1_phase_angle, 3, false, &wbMap3H.phase.l1,
+		if (!QueryNormedValues<int16_t>(address, l1_phase_angle, 3, true, &wbMap3H.phase.l1,
 			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
 		{
 			return false;
 		}
 
-		if (!QueryNormedValues<int32_t>(address, moment_power, 4, false, &wbMap3H.p_moment.all,
+		if (!QueryNormedValues<int32_t>(address, moment_power, 4, true, &wbMap3H.p_moment.all,
 			&std::vector<double>{ 6.10352e-05, 1.52588e-05, 1.52588e-05, 1.52588e-05 }[0]))
 		{
 			return false;
 		}
 
-		if (!QueryNormedValues<uint16_t>(address, l1_u_addr, 3, false, &wbMap3H.u.l1,
-			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
+		if (!QueryNormedValues<uint16_t>(address, l1_u_addr, 3, true, &wbMap3H.u.l1,
+			&std::vector<float>{ 0.01f, 0.01f, 0.01f }[0]))
 		{
 			return false;
 		}
@@ -118,7 +121,7 @@ private:
 			if (!littleEndian)
 			{
 				uint8_t* b1 = reinterpret_cast<uint8_t*>(&data[i]);
-				uint8_t* b2 = reinterpret_cast<uint8_t*>(&data[i + 1]) - 1;
+				uint8_t* b2 = b1 + typeSize - 1;
 
 				for (size_t j = 0; j < typeSize / 2; ++j)
 				{
