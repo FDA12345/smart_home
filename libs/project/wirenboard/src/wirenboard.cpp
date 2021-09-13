@@ -70,21 +70,11 @@ public:
 		constexpr uint16_t l2_u_addr = 0x10da;
 		constexpr uint16_t l3_u_addr = 0x10db;
 
-		queryNormedValuesFromUInt64(
-			queryModbusFunc3Int64Values(dev_addr, total_power_addr, true, 4),
-			new MutableDouble[]{
-					data.p_total,
-					data.l1_p,
-					data.l2_p,
-					data.l3_p,
-			},
-			new double[] {
-			3.125e-05,
-				3.125e-05,
-				3.125e-05,
-				3.125e-05,
+		if (!QueryNormedValues<uint64_t>(address, total_power_addr, 4, true, &wbMap3H.p_total.all,
+				&std::vector<double>{ 3.125e-05, 3.125e-05, 3.125e-05, 3.125e-05 }[0]))
+		{
+			return false;
 		}
-		);
 
 		if (!QueryNormedValues<int16_t>(address, l1_voltage_angle, 3, false, &wbMap3H.angle.l1,
 			&std::vector<float>{ 0.1f, 0.1f, 0.1f }[0]))
@@ -114,81 +104,123 @@ public:
 	}
 
 private: 
-	template <typename ValueType, typename ScaleType>
-	static void NormedValuesFromUInt64(uint64_t* dataFrom, size_t dataTotal, ValueType* dataTo, ScaleType *scales)
+	template <typename FromType, typename ResultType, typename ScaleType>
+	static bool QueryNormedValues(uint8_t deviceAddress, uint16_t address, size_t total, bool littleEndian, ResultType* data, ScaleType *scales)
 	{
-		for (size_t i = 0; i < dataTotal; ++i) {
-			data_to[i].setValue(queryNormedValueFromUInt64
-			(data_from[i], scales[i]));
+		std::vector<FromType> dataFrom(total);
+		if (!QueryModbusValue(deviceAddress, address, total, littleEndian, &dataFrom[0]))
+		{
+			return false;
 		}
+
+		for (size_t i = 0; i < dataTotal; ++i)
+		{
+			data[i] = static_cast<ResultType>(dataFrom[i]) * scales[i]);
+		}
+
+		return true;
 	}
 
-	static uint64_t DecodeUInt64(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3,
-			uint8_t b4, uint8_t b5, uint8_t b6, uint8_t b7,	bool little_endian)
+	template <typename ResultType>
+	bool QueryModbusValue(uint8_t deviceAddress, uint16_t address, size_t total, bool littleEndian, ResultType* result)
 	{
-		uint64_t l = 0;
+		constexpr size_t bytesTotal = sizeof(ResultType) * total;
+		constexpr size_t wordsTotal = bytesTotal / sizeof(uint16_t);
 
-		if (little_endian) {
-			l =
-				((uint64_t)b1 & 0xFF) |
-				(((uint64_t)b0 & 0xFF) << 8) |
-				(((uint64_t)b3 & 0xFF) << 16) |
-				(((uint64_t)b2 & 0xFF) << 24) |
-				(((uint64_t)b5 & 0xFF) << 32) |
-				(((uint64_t)b4 & 0xFF) << 40) |
-				(((uint64_t)b7 & 0xFF) << 48) |
-				(((uint64_t)b6 & 0xFF) << 56);
+		uint8_t buffer[bytesTotal] = { 0 };
+		if (!m_modbus->ReadHoldingRegisters(deviceAddress, address, wordsTotal, buffer))
+		{
+			return false;
+		}
+
+		for (size_t i = 0; i < total; ++i)
+		{
+			switch (wordsTotal)
+			{
+			case 1:
+				result[i] = DecodeUInt16(buffer, littleEndian);
+				break;
+			case 2:
+				result[i] = DecodeUInt32(buffer, littleEndian);
+				break;
+			case 4:
+				result[i] = DecodeUInt64(buffer, littleEndian);
+				break;
+			default:
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	static uint64_t DecodeUInt64(uint8_t buffer[8], bool littleEndian)
+	{
+		uint64_t ull = 0;
+
+		if (littleEndian) {
+			ull =
+				((uint64_t)buffer[1] & 0xFF) |
+				(((uint64_t)buffer[0] & 0xFF) << 8) |
+				(((uint64_t)buffer[3] & 0xFF) << 16) |
+				(((uint64_t)buffer[2] & 0xFF) << 24) |
+				(((uint64_t)buffer[5] & 0xFF) << 32) |
+				(((uint64_t)buffer[4] & 0xFF) << 40) |
+				(((uint64_t)buffer[7] & 0xFF) << 48) |
+				(((uint64_t)buffer[6] & 0xFF) << 56);
 		}
 		else {
-			l =
-				((uint64_t)b7 & 0xFF) |
-				(((uint64_t)b6 & 0xFF) << 8) |
-				(((uint64_t)b5 & 0xFF) << 16) |
-				(((uint64_t)b4 & 0xFF) << 24) |
-				(((uint64_t)b3 & 0xFF) << 32) |
-				(((uint64_t)b2 & 0xFF) << 40) |
-				(((uint64_t)b1 & 0xFF) << 48) |
-				(((uint64_t)b0 & 0xFF) << 56);
+			ull =
+				((uint64_t)buffer[7] & 0xFF) |
+				(((uint64_t)buffer[6] & 0xFF) << 8) |
+				(((uint64_t)buffer[5] & 0xFF) << 16) |
+				(((uint64_t)buffer[4] & 0xFF) << 24) |
+				(((uint64_t)buffer[3] & 0xFF) << 32) |
+				(((uint64_t)buffer[2] & 0xFF) << 40) |
+				(((uint64_t)buffer[1] & 0xFF) << 48) |
+				(((uint64_t)buffer[0] & 0xFF) << 56);
 		};
 
-		return l;
+		return ull;
 	}
 
-	static uint32_t DecodeInt32(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3, bool little_endian)
+	static uint32_t DecodeUInt32(uint8_t buffer[4], bool littleEndian)
 	{
-		uint32_t l = 0;
+		uint32_t ul = 0;
 
-		if (little_endian) {
-			l = (uint32_t)
-				(((uint64_t)b1 & 0xFF) |
-				(((uint64_t)b0 & 0xFF) << 8) |
-				(((uint64_t)b3 & 0xFF) << 16) |
-				(((uint64_t)b2 & 0xFF) << 24));
+		if (littleEndian) {
+			ul = (uint32_t)
+				(((uint64_t)buffer[1] & 0xFF) |
+				(((uint64_t)buffer[0] & 0xFF) << 8) |
+				(((uint64_t)buffer[3] & 0xFF) << 16) |
+				(((uint64_t)buffer[2] & 0xFF) << 24));
 		}
 		else {
-			l = (uint32_t)
-				(((uint64_t)b3 & 0xFF) |
-				(((uint64_t)b2 & 0xFF) << 8) |
-				(((uint64_t)b1 & 0xFF) << 16) |
-				(((uint64_t)b0 & 0xFF) << 24));
+			ul = (uint32_t)
+				(((uint64_t)buffer[3] & 0xFF) |
+				(((uint64_t)buffer[2] & 0xFF) << 8) |
+				(((uint64_t)buffer[1] & 0xFF) << 16) |
+				(((uint64_t)buffer[0] & 0xFF) << 24));
 		}
-		return l;
+
+		return ul;
 	}
 
-	static uint16_t DecodeShort(uint8_t b0, uint8_t b1, bool little_endian)
+	static uint16_t DecodeUInt16(uint8_t buffer[2], bool littleEndian)
 	{
 		uint16_t s = 0;
 
-		if (little_endian) {
+		if (littleEndian) {
 			s = (uint16_t)
-				(((uint64_t)b1 & 0xFF) |
-				(((uint64_t)b0 & 0xFF) << 8));
+				(((uint64_t)buffer[1] & 0xFF) |
+				(((uint64_t)buffer[0] & 0xFF) << 8));
 		}
 		else {
 			s = (uint16_t)
-				(((uint64_t)b1 & 0xFF) |
-				(((uint64_t)b0 & 0xFF) << 8));
+				(((uint64_t)buffer[1] & 0xFF) |
+				(((uint64_t)buffer[0] & 0xFF) << 8));
 		}
+
 		return s;
 	}
 
