@@ -1,309 +1,431 @@
 #include "stdafx.h"
-#include "json_http_client.h"
+#include "http_client.h"
 #include "logger.h"
+#include <curl/curl.h>
 
-/*
-#include <algorithm>
+#include <mutex>
 
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/error/en.h"
+using namespace http_client;
 
-std::string net_server::http::json::ReqRspType = "JSON";
-
-using namespace net_server::http;
-
-class JsonRequest : public net_server::Request
+class CurlGlobalLife
 {
 public:
-	JsonRequest(std::string&& route, std::string&& payload)
-		: m_route(std::move(route))
-		, m_payload(std::move(payload))
-		, m_payloadView(&m_payload[0], m_payload.size())
+	void Init()
 	{
+		std::lock_guard lock(m_mx);
+
+		if (!m_initialized)
+		{
+			m_initialized = true;
+			curl_global_init(CURL_GLOBAL_ALL);
+		}
 	}
 
-	const std::string& Type() const override
+	void Destroy()
 	{
-		return net_server::http::json::ReqRspType;
-	}
+		std::lock_guard lock(m_mx);
 
-	const std::string& Route() const override
-	{
-		return m_route;
-	}
-
-	const std::string_view& Payload() const override
-	{
-		return m_payloadView;
+		if (m_initialized)
+		{
+			m_initialized = false;
+			curl_global_cleanup();
+		}
 	}
 
 private:
-	const std::string m_route;
+	std::mutex m_mx;
+	bool m_initialized = false;
+};
+CurlGlobalLife g_curlGlobalLife;
 
-	const std::string m_payload;
-	const std::string_view m_payloadView;
+
+class CurlList
+{
+public:
+	~CurlList()
+	{
+		if (m_lst)
+		{
+			curl_slist_free_all(m_lst);
+			m_lst = nullptr;
+		}
+	}
+
+	void Append(const std::string& value)
+	{
+		m_lst = curl_slist_append(m_lst, value.c_str());
+	}
+
+	curl_slist* List()
+	{
+		return m_lst;
+	}
+
+private:
+	curl_slist* m_lst = nullptr;
 };
 
 
-class JsonResponse : public net_server::Response
+class CurlHandle
 {
 public:
-	JsonResponse(const std::string& route)
-		: m_route(route)
+	CurlHandle()
 	{
+		g_curlGlobalLife.Init();
+		m_curl = curl_easy_init();
 	}
 
-	const std::string& Type() const override
+	~CurlHandle()
 	{
-		return net_server::http::json::ReqRspType;
+		if (m_curl)
+		{
+			curl_easy_cleanup(m_curl);
+			m_curl = nullptr;
+		}
 	}
 
-	const std::string& Route() const override
-	{
-		return m_route;
-	}
-
-	net_server::ResultCodes Result() const override
-	{
-		return m_result;
-	}
-
-	void Result(net_server::ResultCodes result) override
-	{
-		m_result = result;
-	}
-
-	const std::string& ResultMsg() const override
-	{
-		return m_resultMsg;
-	}
-
-	void ResultMsg(const std::string& msg) override
-	{
-		m_resultMsg = msg;
-	}
-
-	const std::string_view& Payload() const override
-	{
-		return m_payloadView;
-	}
-
-	void Payload(const std::string_view& payload) override
-	{
-		m_payload = std::string(payload.data(), payload.size());
-		m_payloadView = std::string_view(&m_payload[0], m_payload.size());
-	}
+	CURL* Handle() { return m_curl; }
+	const CURL* Handle() const { return m_curl; }
 
 private:
-	const std::string m_route;
-	net_server::ResultCodes m_result = net_server::ResultCodes::CODE_OK;
-	std::string m_resultMsg;
-	std::string m_payload;
-	std::string_view m_payloadView;
+	CURL* m_curl = nullptr;
 };
 
 
-
-class JsonHttpServer : public net_server::Server
+//поддерживает асинхронную работу через калбек asyncFn
+class HttpTask : public std::enable_shared_from_this<HttpTask>
 {
 public:
-	JsonHttpServer(const Params& params)
-		: m_httpServer(CreateServer(params))
+	using AsyncFn = std::function<void(const std::shared_ptr<HttpTask> httpTask)>;
+
+public:
+	HttpTask(const Params& params, const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body, AsyncFn asyncFn)
+		: m_log(logger::Create())
+		, m_params(params)
+		, m_headers(headers)
+		, m_resource(resource)
+		, m_resultFn(resultFn)
+		, m_body(body)
+		, m_curl(std::make_unique<CurlHandle>())
+		, m_headerList(std::make_unique<CurlList>())
+		, m_asyncFn(asyncFn)
 	{
 	}
 
-	bool RouteAdd(const std::string& routePath, net_server::RouteFn routeFn) override
+	void Get()
 	{
-		auto jsonRouteFn = [routeFn](const net_server::Request& req, net_server::Response& rsp)
-		{
-			if (
-				(req.Type() != net_server::http::ReqRspType) ||
-				(rsp.Type() != net_server::http::ReqRspType)
-				)
-			{
-				return false;
-			}
-
-			auto& httpReq = static_cast<const HttpRequest&>(req);
-			auto& httpRsp = static_cast<HttpResponse&>(rsp);
-
-			return OnHttpRoute(routeFn, httpReq, httpRsp);
-		};
-
-		return m_httpServer->RouteAdd(routePath, std::move(jsonRouteFn));
+		StartMethod("GET");
 	}
 
-	bool RouteRemove(const std::string& routePath) override
+	void Post()
 	{
-		return m_httpServer->RouteRemove(routePath);
+		StartMethod("POST");
 	}
 
-	bool Start() override
+	void Put()
 	{
-		return m_httpServer->Start();
+		StartPutMethod();
 	}
 
-	void Stop() override
+	void Delete()
 	{
-		m_httpServer->Stop();
+		StartMethod("DELETE");
+	}
+
+	void Perform()
+	{
+		m_result = curl_easy_perform(m_curl->Handle()) == CURLE_OK;
+	}
+
+	void PopulateResult()
+	{
+		m_resultFn(m_result, m_inBuffer.str());
 	}
 
 private:
-	static bool OnHttpRoute(const net_server::RouteFn& routeFn, const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
+	void StartPutMethod()
 	{
-		return ProcessJsonRequest(routeFn, req, rsp);
-
-		if (req.Method() == "POST")
+		if (!CreateRequest())
 		{
-			const auto& headers = req.Headers();
-			if (ValidateHeaders(headers,
-					{
-						{ "Content-Type", "application/json" },
-						{ "Accept", "application/json" },
-					}
-				))
-			{
-				return ProcessJsonRequest(routeFn, req, rsp);
-			}
+			m_resultFn(false, "");
+			return;
 		}
 
-		return false;
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_UPLOAD, 1L);
+
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_READFUNCTION, &HttpTask::__ReadCallback);
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_READDATA, this);
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_INFILESIZE_LARGE, (curl_off_t)m_body.size());
+
+		m_outBuffer = std::istringstream(m_body);
+
+		m_asyncFn(shared_from_this());
 	}
 
-	static bool ProcessJsonRequest(const net_server::RouteFn& routeFn, const net_server::http::HttpRequest& req, net_server::http::HttpResponse& rsp)
+	void StartMethod(const std::string& method)
 	{
-		return ParseJsonRequest(routeFn, req, rsp, "", "");
-
-		logger::Ptr m_log = logger::Create();
-		rapidjson::Document doc;
-
-		try
+		if (!CreateRequest())
 		{
-			doc.Parse(req.Payload().data(), req.Payload().size());
-			if (doc.HasParseError())
-			{
-				throw std::exception(("not parsed, pos " + std::to_string(doc.GetErrorOffset()) + ", msg " + rapidjson::GetParseError_En(doc.GetParseError())).c_str());
-			}
-
-			auto routeIt = doc.FindMember("route");
-			if (routeIt == doc.MemberEnd() || !routeIt->value.IsString())
-			{
-				return false;
-			}
-
-			auto payloadIt = doc.FindMember(rapidjson::Value{ "payload" });
-			if (payloadIt == doc.MemberEnd() || !payloadIt->value.IsString())
-			{
-				return false;
-			}
-
-			return ParseJsonRequest(routeFn, req, rsp, routeIt->value.GetString(), payloadIt->value.GetString());
-		}
-		catch (const std::exception& e)
-		{
-			logERROR(__FUNCTION__, "json parse error - " << e.what());
+			m_resultFn(false, "");
+			return;
 		}
 
-		return false;
+		if (method != "GET")
+		{
+			if (method == "POST")
+			{
+				curl_easy_setopt(m_curl->Handle(), CURLOPT_POST, 1L);
+			}
+			else
+			{
+				curl_easy_setopt(m_curl->Handle(), CURLOPT_CUSTOMREQUEST, method.c_str());
+			}
+		}
+
+		m_asyncFn(shared_from_this());
 	}
 
-	static bool ParseJsonRequest(const net_server::RouteFn& routeFn, const net_server::http::HttpRequest& req,
-		net_server::http::HttpResponse& rsp, std::string&& route, std::string&& payload)
+	bool CreateRequest()
 	{
-		JsonRequest jsonReq{std::move(route), std::move(payload)};
-		JsonResponse jsonRsp{ jsonReq.Route() };
-
-		const bool ret = routeFn(jsonReq, jsonRsp);
-
-		rapidjson::Document doc(rapidjson::kObjectType);
-
-		static auto addStringMemberFn = [](auto& doc, auto& root, const std::string& name, const std::string& value)
+		if (!m_curl->Handle())
 		{
-			root.AddMember(
-				rapidjson::Value{ name.c_str(), name.size(), doc.GetAllocator() },
-				rapidjson::Value{ value.c_str(), value.size(), doc.GetAllocator() },
-				doc.GetAllocator()
+			return false;
+		}
+
+		if (m_log->Level() == logger::LogLevel::Trace)
+		{
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_VERBOSE, 1L);
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_DEBUGFUNCTION, &HttpTask::__DebugCallback);
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_DEBUGDATA, this);
+		}
+
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_TIMEOUT, m_params.timeout);
+
+		const std::string url = m_params.scheme + "://" + m_params.host + ":" + std::to_string(m_params.port) + m_resource;
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_URL, url.c_str());
+
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_NOPROGRESS, 1L);
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_MAXREDIRS, 50L);
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_TCP_KEEPALIVE, 1L);
+
+		switch (m_params.auth)
+		{
+		case AuthMode::Basic:  curl_easy_setopt(m_curl->Handle(), CURLOPT_HTTPAUTH, static_cast<long>(CURLAUTH_BASIC)); break;
+		case AuthMode::Digest: curl_easy_setopt(m_curl->Handle(), CURLOPT_HTTPAUTH, static_cast<long>(CURLAUTH_DIGEST)); break;
+		}
+
+		if (m_params.auth != AuthMode::None)
+		{
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_USERNAME, m_params.login.c_str());
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_PASSWORD, m_params.password.c_str());
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_HTTPAUTH, static_cast<long>(CURLAUTH_DIGEST));
+		}
+
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_WRITEFUNCTION, &HttpTask::__WriteCallback);
+		curl_easy_setopt(m_curl->Handle(), CURLOPT_WRITEDATA, this);
+
+		if (!m_headers.empty())
+		{
+			for (const auto& hdr : m_headers)
+			{
+				m_headerList->Append(hdr.first + ": " + hdr.second);
+			}
+
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_HTTPHEADER, m_headerList->List());
+		}
+
+		if (!m_body.empty())
+		{
+			curl_easy_setopt(m_curl->Handle(), CURLOPT_POSTFIELDS, m_body.c_str());
+		}
+
+		//curl_easy_setopt(m_curl->Handle(), CURLOPT_SSL_OPTIONS, CURLSSLOPT_AUTO_CLIENT_CERT);// | CURLSSLOPT_NO_REVOKE);
+
+		return true;
+	}
+
+	static size_t __ReadCallback(char *buffer, size_t size, size_t nitems, void *userdata)
+	{
+		auto httpTask = reinterpret_cast<HttpTask*>(userdata);
+		return httpTask->ReadCallback(buffer, size, nitems);
+	}
+	size_t ReadCallback(char *buffer, size_t size, size_t nitems)
+	{
+		const auto maxSize = size * nitems;
+		const auto ret = m_outBuffer.readsome(buffer, maxSize);
+		return size_t(ret);
+	}
+
+	static size_t __WriteCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
+	{
+		auto httpTask = reinterpret_cast<HttpTask*>(userdata);
+		return httpTask->WriteCallback(ptr, size, nmemb);
+	}
+	size_t WriteCallback(char *ptr, size_t size, size_t nmemb)
+	{
+		m_inBuffer << std::string(ptr, nmemb);
+		return nmemb;
+	}
+
+	static int __DebugCallback(CURL *handle, curl_infotype type, char *data, size_t size, void *userdata)
+	{
+		auto httpTask = reinterpret_cast<HttpTask*>(userdata);
+		httpTask->DebugCallback(handle, type, data, size);
+		return 0;
+	}
+	void DebugCallback(CURL *handle, curl_infotype type, char *data, size_t size)
+	{
+		std::string title;
+		switch (type)
+		{
+		case CURLINFO_HEADER_IN:
+			m_debugBuffer << std::string(data, size);
+			return;
+
+		case CURLINFO_HEADER_OUT:
+			m_debugBuffer << std::string(data, size);
+			return;
+
+		case CURLINFO_DATA_IN:
+			title = "Received ...\n";
+			if (!m_debugBuffer.eof())
+			{
+				title += m_debugBuffer.str();
+				m_debugBuffer = std::ostringstream();
+			}
+			break;
+
+		case CURLINFO_DATA_OUT:
+			title = "Sent ...\n";
+			if (!m_debugBuffer.eof())
+			{
+				title += m_debugBuffer.str();
+				m_debugBuffer = std::ostringstream();
+			}
+			break;
+
+		case CURLINFO_SSL_DATA_IN:
+			title = "Received SSL data ...";
+			break;
+
+		case CURLINFO_SSL_DATA_OUT:
+			title = "Sent SSL data ...";
+			break;
+
+		case CURLINFO_TEXT:
+			logDEBUG(__FUNCTION__, "curl text: "<< std::string(data, size));
+			return;
+
+		default: return;
+		}
+
+		logDEBUG(__FUNCTION__, title << std::endl << std::string(data, size) << std::endl);
+	}
+
+private:
+	const logger::Ptr m_log;
+	const Params m_params;
+	const Headers m_headers;
+	const std::string m_resource;
+	const ResultFn m_resultFn;
+	const std::string m_body;
+	const std::unique_ptr<CurlHandle> m_curl;
+	const std::unique_ptr<CurlList> m_headerList;
+	const AsyncFn m_asyncFn;
+
+	std::ostringstream m_inBuffer;
+	std::ostringstream m_debugBuffer;
+	std::istringstream m_outBuffer;
+	bool m_result = false;
+};
+
+
+class HttpClientImpl : public HttpClient
+{
+public:
+	HttpClientImpl(const Params& params)
+		: m_params(params)
+	{
+	}
+
+	void Get(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body) override
+	{
+		CreateTask(headers, resource, resultFn, body)->Get();
+	}
+
+	void Post(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body) override
+	{
+		CreateTask(headers, resource, resultFn, body)->Post();
+	}
+
+	void Put(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body) override
+	{
+		CreateTask(headers, resource, resultFn, body)->Put();
+	}
+
+	void Delete(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body) override
+	{
+		CreateTask(headers, resource, resultFn, body)->Delete();
+	}
+
+private:
+	std::shared_ptr<HttpTask> CreateTask(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body)
+	{
+		return std::make_shared<HttpTask>
+			(
+				m_params,
+				headers,
+				resource,
+				resultFn,
+				body,
+				std::bind(&HttpClientImpl::RunAsync, this, std::placeholders::_1)
 			);
-		};
-
-		rapidjson::Value request(rapidjson::kObjectType);
-		addStringMemberFn(doc, request, "route", jsonReq.Route());
-		addStringMemberFn(doc, request, "payload", std::string(jsonReq.Payload().data(), jsonReq.Payload().size()));
-
-		rapidjson::Value response(rapidjson::kObjectType);
-		addStringMemberFn(doc, response, "route", jsonRsp.Route());
-		addStringMemberFn(doc, response, "payload", std::string(jsonRsp.Payload().data(), jsonRsp.Payload().size()));
-
-		rapidjson::Value result(rapidjson::kObjectType);
-		addStringMemberFn(doc, result, "resultMsg", jsonRsp.ResultMsg());
-		addStringMemberFn(doc, result, "resultCode", GetResultAsText(jsonRsp.Result()));
-
-		doc.AddMember("request", std::move(request), doc.GetAllocator());
-		doc.AddMember("response", std::move(response), doc.GetAllocator());
-		doc.AddMember("result", std::move(result), doc.GetAllocator());
-
-		rapidjson::StringBuffer sb;
-		rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-		doc.Accept(writer);
-
-		const std::string jsonText = sb.GetString();
-
-		rsp.Result(net_server::ResultCodes::CODE_OK);
-		rsp.ResultMsg("OK");
-		rsp.Payload(jsonText);
-		rsp.Headers().push_back({"Content-Type", "application/json"});
-		return true;
 	}
 
-	static std::string GetResultAsText(const net_server::ResultCodes code)
+	void RunAsync(const std::shared_ptr<HttpTask> httpTask)
 	{
-		switch (code)
+		/*
+		m_appartInner->GetService().post([curlTask, appartOutter = m_appartOutter]()
 		{
-		case net_server::ResultCodes::CODE_OK:				return "OK";
-		case net_server::ResultCodes::CODE_NOT_FOUND:		return "NOT_FOUND";
-		case net_server::ResultCodes::CODE_INTERNAL_ERROR:	return "INTERNAL_ERROR";
-		case net_server::ResultCodes::CODE_BUSY:			return "BUSY";
-		}
-		return "UNKNOWN(" + std::to_string(size_t(code)) + ")";
-	}
+			curlTask->Perform();
 
-	static bool ValidateHeaders(const HeaderList& headers, const std::list<Header>& testHeaders)
-	{
-		for (const auto& h : testHeaders)
-		{
-			if (!ValidateHeaderValue(headers, h.name, h.value))
+			appartOutter->GetStrand().post([curlTask]()
 			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	static bool ValidateHeaderValue(const HeaderList& headers, const std::string& name, const std::string& value)
-	{
-		auto[found, it] = FindHeader(headers, name);
-		return found && (it->value == value);
-	}
-
-	static std::tuple<bool, typename HeaderList::const_iterator> FindHeader(const HeaderList& headers, const std::string& name)
-	{
-		auto&& it = std::find_if(headers.cbegin(), headers.cend(),
-			[](const net_server::http::Header& hdr)
-			{
-				return hdr.name == "Content-Type";
+				curlTask->PopulateResult();
 			});
+		});
+		*/
 
-		return std::make_tuple(it != headers.end(), std::move(it));
+		httpTask->Perform();
+		httpTask->PopulateResult();
 	}
 
 private:
-	net_server::Ptr m_httpServer;
+	const logger::Ptr m_log = logger::Create();
+	const Params m_params;
 };
 
-net_server::Ptr net_server::http::json::CreateServer(const net_server::http::Params& params)
+
+Ptr http_client::Create(const std::string& host, uint16_t port)
 {
-	return std::make_unique<JsonHttpServer>(params);
+	Params params;
+
+	params.host = host;
+	params.port = port;
+
+	return std::make_unique<HttpClientImpl>(params);
 }
-*/
+
+Ptr http_client::Create(AuthMode auth, const std::string& login, const std::string& password, const std::string& host, uint16_t port)
+{
+	Params params;
+
+	params.auth = auth;
+	params.login = login;
+	params.password = password;
+
+	params.host = host;
+	params.port = port;
+
+	return std::make_unique<HttpClientImpl>(params);
+}

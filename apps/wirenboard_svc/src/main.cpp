@@ -204,10 +204,16 @@ int main()
 #include "broker_server.h"
 #include "wirenboard.h"
 #include "logger.h"
+#include "http_client.h"
 
 #include <thread>
 
-#include <curl/curl.h>
+http_client::Headers httpHeaders =
+{
+	{"User-Agent", "Wirenboard service client 1.0"},
+	{"Content-Type", "text/html"},
+	{"Accept", "*/*"},
+};
 
 int main()
 {
@@ -215,23 +221,39 @@ int main()
 
 	auto m_log = logger::Create();
 
-	auto driver = serial::wirenboard::Create();
+	//auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda123", "litcaryno", "192.168.41.11", 1880);
+	auto httpClient = http_client::Create("www.ya.ru", 443);
+	if (!httpClient)
+	{
+		logERROR(__FUNCTION__, "http client create failed");
+		return -1;
+	}
 
+	httpClient->Get(httpHeaders, "/", [](bool result, const std::string& answer)
+	{
+	});
+
+
+	auto driver = serial::wirenboard::Create();
 	if (driver->Open("COM7"))
 	{
 		serial::wirenboard::WB_MAP3H wbMap3H = { 0 };
 
-		for (size_t i = 0; i < 10; ++i)
+		for (;;)
 		{
 			if (driver->Read(14, wbMap3H))
 			{
 				logINFO(__FUNCTION__, "p_total " << wbMap3H.p_total.all << ", p_l1 " << wbMap3H.p_total.l1
 					<< ", p_l2 " << wbMap3H.p_total.l2 << ", p_l3 " << wbMap3H.p_total.l3);
+
+				httpClient->Post(httpHeaders, "/update", [](bool result, const std::string& answer) {}, "");
 			}
 			else
 			{
 				logERROR(__FUNCTION__, "read failed");
 			}
+
+			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
 
 		driver->Close();

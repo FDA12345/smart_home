@@ -1,45 +1,45 @@
 #pragma once
 
-/*
-
-json accepting server
-
-json request format
-method POST
-Header "Content-Type: application/json"
-Header "Accept: application/json"
-{
-	"route":"route123",
-	"payload":"abc"
-}
-
-json answer format
-{
-	"request":
-	{
-		"route":"route123",
-		"payload":"abc"
-	},
-	"response":
-	{
-		"route":"route234",
-		"payload":"cde"
-	},
-	"result":
-	{
-		"resultMsg":"msg",
-		"resultCode":"OK"
-	}
-}
-*/
-
 namespace http_client
 {
-	namespace json
+	enum class AuthMode
 	{
-		//extern std::string ReqRspType;
+		None,
+		Basic,
+		Digest,
+	};
 
-		//net_server::Ptr CreateServer(const net_server::http::Params& params);
+	struct Params
+	{
+		std::string scheme = "https";
 
-	};//namespace json
-};//namespace http_client
+		std::string host;
+		uint16_t port = 80;
+
+		AuthMode auth = AuthMode::None;
+		std::string login;
+		std::string password;
+
+		size_t timeout = 5;
+	};
+
+	using Headers = std::map<std::string, std::string>;
+
+	using ResultFn = std::function<void(bool result, const std::string& answer)>;
+
+	class HttpClient
+	{
+	public:
+		virtual ~HttpClient() = default;
+
+		virtual void Get(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body = std::string()) = 0;
+		virtual void Post(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body) = 0;
+		virtual void Put(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body) = 0;
+		virtual void Delete(const Headers& headers, const std::string& resource, ResultFn resultFn, const std::string& body = std::string()) = 0;
+	};
+
+	using Ptr = std::unique_ptr<HttpClient>;
+
+	Ptr Create(const std::string& host, uint16_t port);
+	Ptr Create(AuthMode auth, const std::string& login,	const std::string& password, const std::string& host, uint16_t port);
+};
