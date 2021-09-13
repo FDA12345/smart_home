@@ -222,7 +222,7 @@ int main()
 	auto m_log = logger::Create();
 
 	//auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda123", "litcaryno", "192.168.41.11", 1880);
-	auto httpClient = http_client::Create("www.ya.ru", 443);
+	auto httpClient = http_client::Create("ya.ru", 443);
 	if (!httpClient)
 	{
 		logERROR(__FUNCTION__, "http client create failed");

@@ -19,11 +19,14 @@ namespace serial
 			_19200,
 		};
 
+#pragma pack(push)
+#pragma pack(1)
 		struct Settings
 		{
 			uint8_t address = 0;
 			BaudRate baudRate = BaudRate::_9600;
 		};
+#pragma pack(pop)
 
 		class Fths01
 		{
