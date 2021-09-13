@@ -4,6 +4,7 @@ add_subdirectory(mqtt_broker)
 add_subdirectory(broker_server)
 
 add_subdirectory(http_server)
+add_subdirectory(http_client)
 add_subdirectory(json_http_server)
 add_subdirectory(json_http_client)
 
