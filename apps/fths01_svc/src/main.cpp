@@ -203,39 +203,125 @@ int main()
 #include "mqtt_broker.h"
 #include "broker_server.h"
 #include "finglai_fths01.h"
+#include "http_client.h"
 #include "logger.h"
-
 #include <thread>
 
-#include <curl/curl.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+
+std::vector<uint8_t> g_devices{ 50, 51, 52, 53 };
+
+std::string MakeSensorMsg(uint8_t address, const serial::fths01::Telemetry& telemetry)
+{
+	/*
+	{
+		"request": {
+			"route": "sensors",
+			"command" : "update",
+			"payload" : {
+				"version": "1.0",
+				"sensors" : {
+				"total": 1,
+				"items" :
+					[
+						{
+							"name": "",
+							"address" : "fths01/temp_1st_floor",
+							"type" : "float",
+							"value" : 15,
+							"timestamp" : 0
+						}
+					]
+				}
+			}
+		}
+	}
+	*/
+
+	rapidjson::Document doc(rapidjson::kObjectType);
+
+	rapidjson::Value items(rapidjson::kArrayType);
+
+	auto addItemFn = [&doc, &items](const std::string& name, float value)
+	{
+		rapidjson::Value item(rapidjson::kObjectType);
+
+		item.AddMember("name", rapidjson::Value("", doc.GetAllocator()), doc.GetAllocator());
+		item.AddMember("address", rapidjson::Value(name.c_str(), name.size(), doc.GetAllocator()), doc.GetAllocator());
+		item.AddMember("type", rapidjson::Value("float", doc.GetAllocator()), doc.GetAllocator());
+		item.AddMember("value", value, doc.GetAllocator());
+
+		using clock = std::chrono::system_clock;
+		const auto secondsUtc = std::chrono::duration_cast<std::chrono::seconds>(clock::now().time_since_epoch()).count();
+		item.AddMember("value", secondsUtc, doc.GetAllocator());
+
+		items.PushBack(std::move(item), doc.GetAllocator());
+	};
+
+	addItemFn("fths01://" + std::to_string(address) + "/temp_1st_floor", telemetry.temperature);
+	addItemFn("fths01://" + std::to_string(address) + "/humi_1st_floor", telemetry.humidity);
+
+	rapidjson::Value sensors(rapidjson::kObjectType);
+	sensors.AddMember("total", 2, doc.GetAllocator());
+	sensors.AddMember("items", std::move(items), doc.GetAllocator());
+
+	rapidjson::Value payload(rapidjson::kObjectType);
+	payload.AddMember("version", rapidjson::Value("1.0", doc.GetAllocator()), doc.GetAllocator());
+	payload.AddMember("sensors", std::move(sensors), doc.GetAllocator());
+
+	rapidjson::Value request(rapidjson::kObjectType);
+	request.AddMember("route", rapidjson::Value("sensors", doc.GetAllocator()), doc.GetAllocator());
+	request.AddMember("command", rapidjson::Value("update", doc.GetAllocator()), doc.GetAllocator());
+	request.AddMember("payload", std::move(payload), doc.GetAllocator());
+
+	doc.AddMember("request", std::move(request), doc.GetAllocator());
+
+	rapidjson::StringBuffer sb;
+	rapidjson::Writer writer(sb);
+
+	if (!doc.Accept(writer))
+	{
+		return "";
+	}
+
+	return sb.GetString();
+}
 
 int main()
 {
 	logger::SetLogLevel(logger::LogLevel::Trace);
-
 	auto m_log = logger::Create();
 
-	auto driver = serial::fths01::Create();
+	auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda123", "litcaryno", "192.168.41.11", 1880);
 
+	auto driver = serial::fths01::Create();
 	if (driver->Open("COM6"))
 	{
-		std::vector<int> devices{ 50, 51, 52, 53 };
-
-		for (const auto address : devices)
+		for (;;)
 		{
-			logINFO(__FUNCTION__, "reading address " << address);
-
-			serial::fths01::Telemetry telemetry = { 0 };
-			if (driver->ReadTelemetry(address, telemetry))
+			for (const auto address : g_devices)
 			{
-				logINFO(__FUNCTION__, "address:" << address << ", temp: " << telemetry.temperature << ", humi: " << telemetry.humidity);
-			}
-			else
-			{
-				logERROR(__FUNCTION__, "read error, address " << address);
-			}
+				logINFO(__FUNCTION__, "reading address " << address);
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+				serial::fths01::Telemetry telemetry = { 0 };
+				if (driver->ReadTelemetry(address, telemetry))
+				{
+					logINFO(__FUNCTION__, "address:" << address << ", temp: " << telemetry.temperature << ", humi: " << telemetry.humidity);
+
+					httpClient->Post({}, "/send", [](bool result, const std::string& answer)
+					{
+
+					},
+					MakeSensorMsg(address, telemetry));
+				}
+				else
+				{
+					logERROR(__FUNCTION__, "read error, address " << address);
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			}
 		}
 
 		driver->Close();
