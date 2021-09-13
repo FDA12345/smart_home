@@ -48,6 +48,7 @@ public:
 			return false;
 		}
 
+		//modbus register table of WB MAP 3H
 		constexpr uint16_t total_power_addr = 0x1200;
 		constexpr uint16_t l1_power_addr = 0x1204;
 		constexpr uint16_t l2_power_addr = 0x1208;
@@ -103,9 +104,9 @@ public:
 		return false;
 	}
 
-private: 
+private:
 	template <typename FromType, typename ResultType, typename ScaleType>
-	static bool QueryNormedValues(uint8_t deviceAddress, uint16_t address, size_t total, bool littleEndian, ResultType* data, ScaleType *scales)
+	bool QueryNormedValues(uint8_t deviceAddress, uint16_t address, size_t total, bool littleEndian, ResultType* data, ScaleType *scales)
 	{
 		std::vector<FromType> dataFrom(total);
 		if (!QueryModbusValue(deviceAddress, address, total, littleEndian, &dataFrom[0]))
@@ -113,9 +114,9 @@ private:
 			return false;
 		}
 
-		for (size_t i = 0; i < dataTotal; ++i)
+		for (size_t i = 0; i < total; ++i)
 		{
-			data[i] = static_cast<ResultType>(dataFrom[i]) * scales[i]);
+			data[i] = static_cast<ResultType>(dataFrom[i]) * scales[i];
 		}
 
 		return true;
@@ -124,11 +125,12 @@ private:
 	template <typename ResultType>
 	bool QueryModbusValue(uint8_t deviceAddress, uint16_t address, size_t total, bool littleEndian, ResultType* result)
 	{
-		constexpr size_t bytesTotal = sizeof(ResultType) * total;
-		constexpr size_t wordsTotal = bytesTotal / sizeof(uint16_t);
+		const size_t bytesTotal = sizeof(ResultType) * total;
+		const size_t wordsTotal = bytesTotal / sizeof(uint16_t);
 
-		uint8_t buffer[bytesTotal] = { 0 };
-		if (!m_modbus->ReadHoldingRegisters(deviceAddress, address, wordsTotal, buffer))
+		std::vector<uint8_t> buffer(bytesTotal);
+
+		if (!m_modbus->ReadHoldingRegisters(deviceAddress, address, wordsTotal, reinterpret_cast<uint16_t*>(&buffer[0])))
 		{
 			return false;
 		}
@@ -138,13 +140,13 @@ private:
 			switch (wordsTotal)
 			{
 			case 1:
-				result[i] = DecodeUInt16(buffer, littleEndian);
+				result[i] = DecodeUInt16(&buffer[0], littleEndian);
 				break;
 			case 2:
-				result[i] = DecodeUInt32(buffer, littleEndian);
+				result[i] = DecodeUInt32(&buffer[0], littleEndian);
 				break;
 			case 4:
-				result[i] = DecodeUInt64(buffer, littleEndian);
+				result[i] = DecodeUInt64(&buffer[0], littleEndian);
 				break;
 			default:
 				return false;
@@ -158,7 +160,8 @@ private:
 	{
 		uint64_t ull = 0;
 
-		if (littleEndian) {
+		if (littleEndian)
+		{
 			ull =
 				((uint64_t)buffer[1] & 0xFF) |
 				(((uint64_t)buffer[0] & 0xFF) << 8) |
@@ -169,7 +172,8 @@ private:
 				(((uint64_t)buffer[7] & 0xFF) << 48) |
 				(((uint64_t)buffer[6] & 0xFF) << 56);
 		}
-		else {
+		else
+		{
 			ull =
 				((uint64_t)buffer[7] & 0xFF) |
 				(((uint64_t)buffer[6] & 0xFF) << 8) |
@@ -188,14 +192,16 @@ private:
 	{
 		uint32_t ul = 0;
 
-		if (littleEndian) {
+		if (littleEndian)
+		{
 			ul = (uint32_t)
 				(((uint64_t)buffer[1] & 0xFF) |
 				(((uint64_t)buffer[0] & 0xFF) << 8) |
 				(((uint64_t)buffer[3] & 0xFF) << 16) |
 				(((uint64_t)buffer[2] & 0xFF) << 24));
 		}
-		else {
+		else
+		{
 			ul = (uint32_t)
 				(((uint64_t)buffer[3] & 0xFF) |
 				(((uint64_t)buffer[2] & 0xFF) << 8) |
@@ -210,12 +216,14 @@ private:
 	{
 		uint16_t s = 0;
 
-		if (littleEndian) {
+		if (littleEndian)
+		{
 			s = (uint16_t)
 				(((uint64_t)buffer[1] & 0xFF) |
 				(((uint64_t)buffer[0] & 0xFF) << 8));
 		}
-		else {
+		else
+		{
 			s = (uint16_t)
 				(((uint64_t)buffer[1] & 0xFF) |
 				(((uint64_t)buffer[0] & 0xFF) << 8));
@@ -229,6 +237,7 @@ private:
 	const logger::Ptr m_log = logger::Create();
 	serial::modbus::Ptr m_modbus;
 };
+
 
 serial::wirenboard::Ptr serial::wirenboard::Create()
 {
