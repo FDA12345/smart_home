@@ -101,7 +101,7 @@ public:
 			return false;
 		}
 
-		return false;
+		return true;
 	}
 
 private:
@@ -125,10 +125,14 @@ private:
 	template <typename ResultType>
 	bool QueryModbusValue(uint8_t deviceAddress, uint16_t address, size_t total, bool littleEndian, ResultType* result)
 	{
-		const size_t bytesTotal = sizeof(ResultType) * total;
+		constexpr size_t bytesStep = sizeof(ResultType);
+		constexpr size_t wordsStep = bytesStep / sizeof(uint16_t);
+
+		const size_t bytesTotal = bytesStep * total;
 		const size_t wordsTotal = bytesTotal / sizeof(uint16_t);
 
 		std::vector<uint8_t> buffer(bytesTotal);
+		size_t dataIndex = 0;
 
 		if (!m_modbus->ReadHoldingRegisters(deviceAddress, address, wordsTotal, reinterpret_cast<uint16_t*>(&buffer[0])))
 		{
@@ -137,20 +141,22 @@ private:
 
 		for (size_t i = 0; i < total; ++i)
 		{
-			switch (wordsTotal)
+			switch (wordsStep)
 			{
 			case 1:
-				result[i] = DecodeUInt16(&buffer[0], littleEndian);
+				result[i] = DecodeUInt16(&buffer[dataIndex], littleEndian);
 				break;
 			case 2:
-				result[i] = DecodeUInt32(&buffer[0], littleEndian);
+				result[i] = DecodeUInt32(&buffer[dataIndex], littleEndian);
 				break;
 			case 4:
-				result[i] = DecodeUInt64(&buffer[0], littleEndian);
+				result[i] = DecodeUInt64(&buffer[dataIndex], littleEndian);
 				break;
 			default:
 				return false;
 			}
+
+			dataIndex += bytesStep;
 		}
 
 		return true;

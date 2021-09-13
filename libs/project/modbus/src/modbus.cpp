@@ -177,14 +177,7 @@ public:
 			return false;
 		}
 
-		/*
-		for (size_t i = 0; i < total; ++i)
-		{
-			dst[i] = modbus::RevertBytesOrder(rsp.regs[i]);
-		}
-		*/
 		memcpy(dst, rsp.regs, rsp.bytesTotal);
-
 		return true;
 	}
 

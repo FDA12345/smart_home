@@ -221,10 +221,17 @@ int main()
 	{
 		serial::wirenboard::WB_MAP3H wbMap3H = { 0 };
 
-		if (driver->Read(14, wbMap3H))
+		for (size_t i = 0; i < 10; ++i)
 		{
-			logINFO(__FUNCTION__, "p_total " << wbMap3H.p_total.all << ", p_l1 " << wbMap3H.p_total.l1
-				<< ", p_l2 " << wbMap3H.p_total.l2 << ", p_l3 " << wbMap3H.p_total.l3);
+			if (driver->Read(14, wbMap3H))
+			{
+				logINFO(__FUNCTION__, "p_total " << wbMap3H.p_total.all << ", p_l1 " << wbMap3H.p_total.l1
+					<< ", p_l2 " << wbMap3H.p_total.l2 << ", p_l3 " << wbMap3H.p_total.l3);
+			}
+			else
+			{
+				logERROR(__FUNCTION__, "read failed");
+			}
 		}
 
 		driver->Close();

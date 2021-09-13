@@ -70,8 +70,8 @@ public:
 
 		if (m_modbus->ReadHoldingRegisters(address, 0, 2, data.words))
 		{
-			telemetry.temperature = data.temp / 10.f;
-			telemetry.humidity = data.humi / 10.f;
+			telemetry.temperature = DecodeUInt16(data.temp, true) / 10.f;
+			telemetry.humidity = DecodeUInt16(data.humi, true) / 10.f;
 
 			return true;
 		}
@@ -92,6 +92,28 @@ public:
 		return m_modbus->WriteSingleRegister(address, 0, value);
 	}
 
+private:
+	static uint16_t DecodeUInt16(uint16_t data, bool littleEndian)
+	{
+		uint16_t s = 0;
+
+		uint8_t* buffer = reinterpret_cast<uint8_t*>(&data);
+
+		if (littleEndian)
+		{
+			s = (uint16_t)
+				(((uint64_t)buffer[1] & 0xFF) |
+				(((uint64_t)buffer[0] & 0xFF) << 8));
+		}
+		else
+		{
+			s = (uint16_t)
+				(((uint64_t)buffer[0] & 0xFF) |
+				(((uint64_t)buffer[1] & 0xFF) << 8));
+		}
+
+		return s;
+	}
 private:
 	const logger::Ptr m_log = logger::Create();
 	serial::modbus::Ptr m_modbus;
