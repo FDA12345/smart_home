@@ -210,7 +210,7 @@ int main()
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
-std::vector<uint8_t> g_devices{ 50, 51, 52, 53 };
+std::vector<int> g_devices{ 50, 51, 52, 53 };
 
 std::string MakeSensorMsg(uint8_t address, const serial::fths01::Telemetry& telemetry)
 {
@@ -290,10 +290,10 @@ std::string MakeSensorMsg(uint8_t address, const serial::fths01::Telemetry& tele
 
 int main()
 {
-	logger::SetLogLevel(logger::LogLevel::Trace);
+	//logger::SetLogLevel(logger::LogLevel::Trace);
 	auto m_log = logger::Create();
 
-	auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda123", "litcaryno", "192.168.41.11", 1880);
+	auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda", "litcaryno123", "192.168.41.11", 1880);
 
 	auto driver = serial::fths01::Create();
 	if (driver->Open("COM6"))
@@ -309,11 +309,19 @@ int main()
 				{
 					logINFO(__FUNCTION__, "address:" << address << ", temp: " << telemetry.temperature << ", humi: " << telemetry.humidity);
 
-					httpClient->Post({}, "/send", [](bool result, const std::string& answer)
-					{
+					httpClient->Post(
+						{
+							{"User-Agent", "FTHS01 sensors service 1.0"},
+							{"Content-Type", "application/json; charset=utf-8"},
+							{"Accept", "application/json"},
+						},
+						"/send",
+						[](bool result, const std::string& answer)
+						{
 
-					},
-					MakeSensorMsg(address, telemetry));
+						},
+						MakeSensorMsg(address, telemetry)
+					);
 				}
 				else
 				{

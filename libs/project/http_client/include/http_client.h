@@ -11,7 +11,7 @@ namespace http_client
 
 	struct Params
 	{
-		std::string scheme = "https";
+		std::string scheme = "http";
 
 		std::string host;
 		uint16_t port = 80;
