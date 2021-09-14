@@ -213,7 +213,7 @@ const std::string serialName = "COM6";
 
 int main()
 {
-	logger::SetLogLevel(logger::LogLevel::Trace);
+	//logger::SetLogLevel(logger::LogLevel::Trace);
 	auto m_log = logger::Create();
 
 	auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda", "litcaryno123", "192.168.41.11", 1880);
