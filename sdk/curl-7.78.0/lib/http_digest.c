@@ -66,6 +66,56 @@ CURLcode Curl_input_digest(struct Curl_easy *data,
   return Curl_auth_decode_digest_http_message(header, digest);
 }
 
+/*FDA fix for Node-RED http-auth -> set ", " between parameters*/
+void fixCommaList(const char* s, size_t len, char** out_ss, size_t* out_len)
+{
+	char* ss = malloc(len + 1);
+	memcpy(ss, s, len);
+	ss[len] = 0;
+
+	*out_ss = ss;
+	*out_len = len;
+
+	while (1)
+	{
+		int fixed = 0;
+
+		for (size_t i = 0; i < len - 1; ++i)
+		{
+			if ((ss[i] == ',') && (ss[i + 1] != ' '))
+			{
+				size_t new_len = len + 1;
+				char* new_ss = malloc(new_len + 1);
+
+				if (!new_ss)
+				{
+					return;
+				}
+
+				memcpy(new_ss, ss, i + 1);
+				new_ss[i + 1] = ' ';
+				memcpy(new_ss + i + 2, ss + i + 1, len - i);
+
+				free(ss);
+
+				*out_ss = new_ss;
+				ss = new_ss;
+
+				*out_len = new_len;
+				len = new_len;
+
+				fixed = 1;
+				break;
+			}
+		}
+
+		if (!fixed)
+		{
+			break;
+		}
+	}
+}
+
 CURLcode Curl_output_digest(struct Curl_easy *data,
                             bool proxy,
                             const unsigned char *request,
@@ -162,6 +212,21 @@ CURLcode Curl_output_digest(struct Curl_easy *data,
   if(result)
     return result;
 
+  /*FDA fix for Node-RED http-auth -> set ", " between parameters*/
+  if (1)
+  {
+    char* fixed_response = 0;
+    size_t fixed_len = 0;
+
+    fixCommaList(response, len, &fixed_response, &fixed_len);
+    free(response);
+
+    response = fixed_response;
+    len = fixed_len;
+
+    printf("++++%s++++len %d", response, len);
+  }
+  
   *allocuserpwd = aprintf("%sAuthorization: Digest %s\r\n",
                           proxy ? "Proxy-" : "",
                           response);
