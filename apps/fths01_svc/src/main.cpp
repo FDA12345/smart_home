@@ -203,7 +203,7 @@ int main()
 #include "mqtt_broker.h"
 #include "broker_server.h"
 #include "finglai_fths01.h"
-//#include "http_client.h"
+#include "http_client.h"
 #include "logger.h"
 #include "messages.h"
 #include <thread>
@@ -213,19 +213,38 @@ const std::string serialName = "COM6";
 
 int main()
 {
-	//logger::SetLogLevel(logger::LogLevel::Trace);
+	logger::SetLogLevel(logger::LogLevel::Trace);
 	auto m_log = logger::Create();
 
-	//auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda", "litcaryno123", "192.168.41.11", 1880);
+	auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda", "litcaryno123", "192.168.41.11", 1880);
 
-	auto&& broker = broker::mqtt::Create("192.168.41.11", "finglai");
-	auto server = net_server::broker::CreateServer(std::move(broker));
+	auto msg = messages::SensorsMsg::Create();
+	msg->AddSensor("temperature", "/temperature", 5);
 
+	//server->Send();
+
+	httpClient->Post
+	(
+		{
+			{"User-Agent", "FTHS01 sensors service 1.0"},
+			{"Content-Type", "application/json; charset=utf-8"},
+			{"Accept", "application/json"},
+		},
+		"/send",
+		[](bool result, const std::string& answer)
+		{
+		},
+		msg->MakeJson()
+	);
+
+	/*
+	auto server = net_server::broker::CreateServer(broker::mqtt::Create("192.168.41.11", "finglai"));
 	if (!server->Start())
 	{
 		logERROR(__FUNCTION__, "broker connection start failed");
 		return -1;
 	}
+	*/
 
 	auto driver = serial::fths01::Create();
 	if (driver->Open(serialName))
@@ -247,7 +266,8 @@ int main()
 					msg->AddSensor("temperature", baseAddress + "/temperature", telemetry.temperature);
 					msg->AddSensor("humidity", baseAddress + "/humidity", telemetry.humidity);
 
-					/*
+					//server->Send();
+
 					httpClient->Post(
 						{
 							{"User-Agent", "FTHS01 sensors service 1.0"},
@@ -260,7 +280,6 @@ int main()
 						},
 						msg->MakeJson()
 					);
-					*/
 				}
 				else
 				{
@@ -274,6 +293,8 @@ int main()
 		driver->Close();
 	}
 
+	/*
 	server->Stop();
 	server.reset();
+	*/
 }
