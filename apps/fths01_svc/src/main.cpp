@@ -200,25 +200,35 @@ int main()
 }
 */
 
-//#include "mqtt_broker.h"
-//#include "broker_server.h"
+#include "mqtt_broker.h"
+#include "broker_server.h"
 #include "finglai_fths01.h"
-#include "http_client.h"
+//#include "http_client.h"
 #include "logger.h"
 #include "messages.h"
 #include <thread>
 
-std::vector<int> g_devices{ 50, 51, 52, 53 };
+const std::vector<int> g_devices{ 50, 51, 52, 53 };
+const std::string serialName = "COM6";
 
 int main()
 {
 	//logger::SetLogLevel(logger::LogLevel::Trace);
 	auto m_log = logger::Create();
 
-	auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda", "litcaryno123", "192.168.41.11", 1880);
+	//auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda", "litcaryno123", "192.168.41.11", 1880);
+
+	auto&& broker = broker::mqtt::Create("192.168.41.11", "finglai");
+	auto server = net_server::broker::CreateServer(std::move(broker));
+
+	if (!server->Start())
+	{
+		logERROR(__FUNCTION__, "broker connection start failed");
+		return -1;
+	}
 
 	auto driver = serial::fths01::Create();
-	if (driver->Open("COM6"))
+	if (driver->Open(serialName))
 	{
 		for (;;)
 		{
@@ -231,10 +241,13 @@ int main()
 				{
 					logINFO(__FUNCTION__, "address:" << address << ", temp: " << telemetry.temperature << ", humi: " << telemetry.humidity);
 
-					auto msg = messages::SensorsMsg::Create();
-					msg->AddSensor("temperature", "finglai://fths01/" + std::to_string(address) + "/temperature", telemetry.temperature);
-					msg->AddSensor("humidity", "finglai://fths01/" + std::to_string(address) + "/humidity", telemetry.humidity);
+					const std::string baseAddress = "finglai://" + /*serialName + "/" +*/ std::to_string(address) + "/fths01";
 
+					auto msg = messages::SensorsMsg::Create();
+					msg->AddSensor("temperature", baseAddress + "/temperature", telemetry.temperature);
+					msg->AddSensor("humidity", baseAddress + "/humidity", telemetry.humidity);
+
+					/*
 					httpClient->Post(
 						{
 							{"User-Agent", "FTHS01 sensors service 1.0"},
@@ -247,6 +260,7 @@ int main()
 						},
 						msg->MakeJson()
 					);
+					*/
 				}
 				else
 				{
@@ -260,15 +274,6 @@ int main()
 		driver->Close();
 	}
 
-	/*
-	auto&& broker = broker::mqtt::Create("127.0.0.1", "client123");
-	auto server = net_server::broker::CreateServer(std::move(broker));
-
-	if (server->Start())
-	{
-	}
-
 	server->Stop();
 	server.reset();
-	*/
 }
