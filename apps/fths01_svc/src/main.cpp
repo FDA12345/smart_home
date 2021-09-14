@@ -208,6 +208,8 @@ int main()
 #include "messages.h"
 #include <thread>
 
+#include <iostream>
+
 const std::vector<int> g_devices{ 50, 51, 52, 53 };
 const std::string serialName = "COM6";
 
@@ -216,12 +218,11 @@ int main()
 	//logger::SetLogLevel(logger::LogLevel::Trace);
 	auto m_log = logger::Create();
 
+	/*
 	auto httpClient = http_client::Create(http_client::AuthMode::Digest, "fda", "litcaryno123", "192.168.41.11", 1880);
 
 	auto msg = messages::SensorsMsg::Create();
 	msg->AddSensor("temperature", "/temperature", 5);
-
-	//server->Send();
 
 	httpClient->Post
 	(
@@ -236,15 +237,39 @@ int main()
 		},
 		msg->MakeJson()
 	);
+	*/
 
-	/*
-	auto server = net_server::broker::CreateServer(broker::mqtt::Create("192.168.41.11", "finglai"));
+	std::shared_ptr<::broker::Broker> broker = broker::mqtt::Create("192.168.41.11", "finglai");
+	auto server = net_server::broker::CreateServer(broker);
+
+	server->RouteAdd("/smart_home/internal/response", [](const net_server::Request& req, net_server::Response& rsp) -> bool
+	{
+		std::cout << std::string(req.Payload()) << std::endl;
+		return false;
+	});
+
+	if (server->Start())
+	{
+		auto msg = messages::SensorsMsg::Create();
+		msg->AddSensor("temperature", "/temperature", 5);
+
+		const std::string& json = msg->MakeJson();
+		broker->Publish("/smart_home/internal/request", { json.begin(), json.end() });
+	}
+
+	for (;;)
+	{
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+	return 0;
+
+
+
 	if (!server->Start())
 	{
 		logERROR(__FUNCTION__, "broker connection start failed");
 		return -1;
 	}
-	*/
 
 	auto driver = serial::fths01::Create();
 	if (driver->Open(serialName))
@@ -266,8 +291,11 @@ int main()
 					msg->AddSensor("temperature", baseAddress + "/temperature", telemetry.temperature);
 					msg->AddSensor("humidity", baseAddress + "/humidity", telemetry.humidity);
 
+					const std::string& json = msg->MakeJson();
+					broker->Publish("/smart_home/internal/request", { json.begin(), json.end() });
 					//server->Send();
 
+					/*
 					httpClient->Post(
 						{
 							{"User-Agent", "FTHS01 sensors service 1.0"},
@@ -280,6 +308,7 @@ int main()
 						},
 						msg->MakeJson()
 					);
+					*/
 				}
 				else
 				{

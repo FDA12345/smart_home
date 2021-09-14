@@ -11,7 +11,7 @@ namespace net_server
 		extern std::string ReqRspType;
 
 		//create server via specified broker instance
-		Ptr CreateServer(::broker::Ptr&& broker);
+		Ptr CreateServer(const std::shared_ptr<::broker::Broker>& broker);
 
 	};//broker
 };//net_server

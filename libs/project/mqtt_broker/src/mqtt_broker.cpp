@@ -145,6 +145,7 @@ public:
 
 			m_subscribes.push_back(topicName);
 			m_subscribed = true;
+
 			m_cv.notify_one();
 		}
 		++it->second;
@@ -165,6 +166,7 @@ public:
 
 		m_unsubscribes.push_back(topicName);
 		m_unsubscribed = true;
+
 		m_cv.notify_one();
 	}
 
@@ -175,6 +177,7 @@ public:
 		std::lock_guard lock(m_mx);
 		m_published = true;
 		m_publishes.emplace_back(std::move(p));
+
 		m_cv.notify_one();
 	}
 
@@ -208,7 +211,10 @@ private:
 			case STATE_JUST_CONNECTED:
 				{
 					FireConnected();
+
 					PrepareSubscribes();
+					PerformSubscribe();
+
 					PerformPublish();
 					m_state = STATE_SUBSCRIBE;
 				}
@@ -250,6 +256,7 @@ private:
 	bool Connect() const
 	{
 		MQTTClient_connectOptions opts = MQTTClient_connectOptions_initializer;
+
 		opts.keepAliveInterval = KEEP_ALIVE_INTERVAL;
 		opts.cleansession = 1;
 		opts.connectTimeout = CONNECT_TIMEOUT;
@@ -419,7 +426,9 @@ private:
 
 		{
 			std::lock_guard lock(m_mx);
+
 			publishes.splice(publishes.begin(), m_publishes);
+			m_published = false;
 		}
 
 		while (!publishes.empty())

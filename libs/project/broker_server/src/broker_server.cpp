@@ -96,8 +96,8 @@ class BrokerServerImpl :
 	private BrokerEvents
 {
 public:
-	BrokerServerImpl(::broker::Ptr&& broker)
-		: m_broker(std::move(broker))
+	BrokerServerImpl(const std::shared_ptr<Broker>& broker)
+		: m_broker(broker)
 	{
 		m_broker->SubscribeEvents(*this);
 	}
@@ -211,14 +211,14 @@ private:
 	};
 
 private:
-	::broker::Ptr m_broker;
+	const std::shared_ptr<Broker> m_broker;
 
 	std::mutex m_mx;
 	std::map<std::string, RouteInfo> m_routes;
 };
 
 
-net_server::Ptr net_server::broker::CreateServer(::broker::Ptr&& broker)
+net_server::Ptr net_server::broker::CreateServer(const std::shared_ptr<Broker>& broker)
 {
-	return std::make_unique<BrokerServerImpl>(std::move(broker));
+	return std::make_unique<BrokerServerImpl>(broker);
 }
