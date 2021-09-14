@@ -223,8 +223,6 @@ CURLcode Curl_output_digest(struct Curl_easy *data,
 
     response = fixed_response;
     len = fixed_len;
-
-    printf("++++%s++++len %d", response, len);
   }
   
   *allocuserpwd = aprintf("%sAuthorization: Digest %s\r\n",
