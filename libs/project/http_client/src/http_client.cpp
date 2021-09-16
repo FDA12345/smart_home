@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "http_client.h"
 #include "logger.h"
-#include <curl/curl.h>
 
+#include <curl/curl.h>
 #include <mutex>
 
 using namespace http_client;

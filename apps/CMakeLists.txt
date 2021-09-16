@@ -1,3 +1,4 @@
 add_subdirectory(noolite_svc)
 add_subdirectory(fths01_svc)
 add_subdirectory(wirenboard_svc)
+add_subdirectory(tcp_svc)
