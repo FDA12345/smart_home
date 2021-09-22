@@ -8,10 +8,13 @@ target_precompile_headers(tags_svc PRIVATE src/stdafx.h)
 
 set(HEADERS
 	src/stdafx.h
+	src/db.h
+	src/mysql_db.h
 )
 
 set(SOURCES
 	src/main.cpp
+	src/mysql_db.cpp
 )
 
 target_sources(tags_svc PRIVATE ${HEADERS} ${SOURCES})

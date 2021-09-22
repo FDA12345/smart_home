@@ -1,9 +1,7 @@
 #include "stdafx.h"
-
-#include "mysql.h"
+#include "mysql_db.h"
 
 int main()
 {
-	MYSQL mysql;
-	mysql_init(&mysql);
+	auto db = db::mysql::Create();
 }
