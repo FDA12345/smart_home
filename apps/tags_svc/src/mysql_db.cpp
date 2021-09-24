@@ -121,7 +121,7 @@ public:
 			}
 
 			if (!mysql_real_connect(m_mysql->Handle(), m_params.host.c_str(), m_params.user.c_str(),
-					m_params.password.c_str(), m_params.db.c_str(), m_params.port, nullptr, CLIENT_COMPRESS))
+					m_params.password.c_str(), m_params.db.c_str(), m_params.port, nullptr, 0))//CLIENT_COMPRESS))
 			{
 				break;
 			}
