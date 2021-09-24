@@ -34,10 +34,18 @@ int main()
 
 	while (result->Next())
 	{
+		std::ostringstream oss;
 		for (size_t idx = 0; idx < result->FieldsCount(); ++idx)
 		{
-			logINFO(__FUNCTION__, result->ValueAsString(idx));
+			if (idx != 0)
+			{
+				oss << "|";
+			}
+
+			oss << result->ValueAsString(idx);
 		}
+
+		logINFO(__FUNCTION__, oss.str());
 	}
 
 	db->Close();
