@@ -177,6 +177,21 @@ public:
 		return "";
 	}
 
+	bool BeginTransaction() override
+	{
+		return Query("START TRANSACTION").get();
+	}
+
+	bool CommitTransaction() override
+	{
+		return Query("COMMIT").get();
+	}
+
+	bool RollbackTransaction() override
+	{
+		return Query("ROLLBACK").get();
+	}
+
 private:
 	std::tuple<bool, std::string> EscapeQuery(const std::string& sql)
 	{

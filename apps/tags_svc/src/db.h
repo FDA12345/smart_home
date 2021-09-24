@@ -36,6 +36,10 @@ public:
 	virtual bool Ping() = 0;
 
 	virtual std::string LastError() const = 0;
+
+	virtual bool BeginTransaction() = 0;
+	virtual bool CommitTransaction() = 0;
+	virtual bool RollbackTransaction() = 0;
 };
 
 using Ptr = std::unique_ptr<Db>;

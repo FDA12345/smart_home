@@ -28,23 +28,20 @@ namespace db
 		class DbVersioning
 		{
 		public:
-			using Ptr = std::unique_ptr<DbVersioning>;
-			static Ptr Create(db::Ptr&& db);
-
-		public:
 			virtual ~DbVersioning() = default;
 
-			virtual bool RegisterVersion(DbVersion::Ptr&& dbVersion) = 0;
+			virtual bool AddVersion(DbVersion::Ptr&& dbVersion) = 0;
 
-			virtual uint64_t Version() const = 0;
-			virtual std::string Description() const = 0;
+			virtual uint64_t Version() const = 0;//0 -> not versioned yet|db is empty
 
-			virtual bool Upgrade() = 0;//downgrade to previous version
+			virtual bool Upgrade() = 0;//upgrade to last version
 			virtual bool Upgrade(uint64_t version) = 0;
 
 			virtual bool Downgrade() = 0;//downgrade to previous version
 			virtual bool Downgrade(uint64_t version) = 0;
 		};
 
+		using Ptr = std::unique_ptr<DbVersioning>;
+		Ptr Create(db::Ptr&& db);
 	}
 }
