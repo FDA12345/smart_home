@@ -1,6 +1,6 @@
 #pragma once
 
-#include "db.h"
+#include "db_versioning.h"
 
 namespace db
 {
@@ -10,6 +10,15 @@ namespace db
 		{
 		};
 
-		Ptr Create(const Params& params);
+		class TagsDb : public db::versioning::DbVersioning
+		{
+		public:
+			virtual ~TagsDb() = default;
+
+		};
+
+		using Ptr = std::unique_ptr<TagsDb>;
+
+		Ptr Create(const db::Ptr& db, db::versioning::Ptr&& verDb, const Params& params);
 	}
 };

@@ -2,6 +2,7 @@
 #include "mysql_db.h"
 #include "logger.h"
 #include "db_versioning.h"
+#include "tags_db.h"
 
 int main()
 {
@@ -13,6 +14,12 @@ int main()
 	params.user = "root";
 	params.password = "";
 
-	auto dbVer = db::versioning::Create(db::mysql::Create(params));
-	dbVer->Upgrade();
+	auto db = db::mysql::Create(params);
+	auto verDb = db::versioning::Create(db);
+
+	auto tagsDb = db::tags::Create(std::move(db), std::move(verDb), {});
+	if (!tagsDb->Upgrade())
+	{
+		return -1;
+	}
 }

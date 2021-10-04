@@ -22,7 +22,7 @@ namespace db
 			virtual bool CanDowngrade(const db::Ptr& db) const { return false; }
 
 			virtual bool Upgrade(const db::Ptr& db) = 0;
-			virtual bool Downgrade(const db::Ptr& db) = 0;
+			virtual bool Downgrade(const db::Ptr& db) { return false; };
 		};
 
 		class DbVersioning
@@ -42,6 +42,6 @@ namespace db
 		};
 
 		using Ptr = std::unique_ptr<DbVersioning>;
-		Ptr Create(db::Ptr&& db);
+		Ptr Create(const db::Ptr& db);
 	}
 }

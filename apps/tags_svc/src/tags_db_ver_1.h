@@ -1,10 +1,15 @@
 #pragma once
 
-#include "db.h"
-
-namespace db
+class Ver1 : public db::versioning::DbVersion
 {
-	namespace tags
+public:
+	uint64_t Version() const override { return 1; }
+	std::string Description() const override { return ""; }
+
+	bool Upgrade(const db::Ptr& db) override
 	{
+		return false;
 	}
 };
+
+m_verDb->AddVersion(std::move(std::unique_ptr<Ver1>()));

@@ -2,6 +2,7 @@
 
 #include "db_versioning.h"
 
+
 namespace db
 {
 namespace versioning
@@ -10,8 +11,8 @@ namespace versioning
 class DbVersioningImpl : public DbVersioning
 {
 public:
-	DbVersioningImpl(db::Ptr&& db)
-		: m_db(std::move(db))
+	DbVersioningImpl(const db::Ptr& db)
+		: m_db(db)
 	{
 		LoadVersion();
 	}
@@ -138,9 +139,9 @@ private:
 	VersionsMap m_versions;
 };
 
-Ptr Create(db::Ptr&& db)
+Ptr Create(const db::Ptr& db)
 {
-	return std::make_unique<DbVersioningImpl>(std::move(db));
+	return std::make_unique<DbVersioningImpl>(db);
 }
 
 }
