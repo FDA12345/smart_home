@@ -67,14 +67,19 @@ public:
 
 
 
-		if (!db->Query("CREATE TABLE agg_types (id int PRIMARY KEY, name VARCHAR(255), note VARCHAR(1000)) ENGINE=MyISAM"))
+		if (!db->Query("CREATE TABLE filter_types (id int PRIMARY KEY, name VARCHAR(255), note VARCHAR(1000)) ENGINE=MyISAM"))
+		{
+			return false;
+		}
+
+		if (!db->Query("INSERT INTO filter_types VALUES (1, 'сырое значение', 'без использования какой либо фильтрации')"))
 		{
 			return false;
 		}
 
 
 
-		if (!db->Query("CREATE TABLE history (id int PRIMARY KEY, tag_id int NOT NULL, seconds_period int NOT NULL, create_date DATETIME, agg_type int not null, agg_params VARCHAR(10000), INDEX idx_history__tag_id(tag_id)) ENGINE=MyISAM"))
+		if (!db->Query("CREATE TABLE history (id int PRIMARY KEY, tag_id int NOT NULL, seconds_period int NOT NULL, create_date DATETIME, filter_type int not null, filter_params VARCHAR(10000), INDEX idx_history__tag_id(tag_id)) ENGINE=MyISAM"))
 		{
 			return false;
 		}
@@ -110,7 +115,7 @@ public:
 		db->Query("DROP TABLE history_integers");
 		db->Query("DROP TABLE history_floats");
 		db->Query("DROP TABLE history");
-		db->Query("DROP TABLE agg_types");
+		db->Query("DROP TABLE filter_types");
 		db->Query("DROP TABLE tags");
 		db->Query("DROP TABLE sensors");
 		db->Query("DROP TABLE value_types");

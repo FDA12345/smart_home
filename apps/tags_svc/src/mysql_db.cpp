@@ -126,6 +126,16 @@ public:
 				break;
 			}
 
+			if (!Query("SET NAMES 'cp1251'").get())
+			{
+				break;
+			}
+
+			if (!Query("SET CHARACTER SET 'cp1251'").get())
+			{
+				break;
+			}
+
 			return true;
 		}
 
@@ -163,6 +173,7 @@ public:
 
 		if (mysql_real_query(m_mysql->Handle(), sql.c_str(), sql.length()) != 0)
 		{
+			std::string errMsg = LastError();
 			return nullptr;
 		}
 
