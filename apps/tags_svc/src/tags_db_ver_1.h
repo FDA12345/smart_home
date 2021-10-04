@@ -12,4 +12,4 @@ public:
 	}
 };
 
-m_verDb->AddVersion(std::move(std::unique_ptr<Ver1>()));
+m_verDb->AddVersion(std::unique_ptr<Ver1>());
