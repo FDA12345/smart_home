@@ -72,7 +72,7 @@ public:
 			return false;
 		}
 
-		if (!db->Query("INSERT INTO filter_types VALUES (1, 'сырое значение', 'без использования какой либо фильтрации')"))
+		if (!db->Query("INSERT INTO filter_types VALUES (1, 'raw value', 'not using some filtering')"))
 		{
 			return false;
 		}
