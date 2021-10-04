@@ -4,7 +4,7 @@ class Ver1 : public db::versioning::DbVersion
 {
 public:
 	uint64_t Version() const override { return 1; }
-	std::string Description() const override { return ""; }
+	std::string Description() const override { return "Base tags db"; }
 
 	bool Upgrade(const db::Ptr& db) override
 	{
