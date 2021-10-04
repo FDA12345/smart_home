@@ -67,19 +67,24 @@ public:
 
 
 
-		if (!db->Query("CREATE TABLE filter_types (id int PRIMARY KEY, name VARCHAR(255), note VARCHAR(1000)) ENGINE=MyISAM"))
+		if (!db->Query("CREATE TABLE filters (id int PRIMARY KEY, name VARCHAR(255), note VARCHAR(1000), param_count int not null, param_name1 VARCHAR(100)"
+			", param_name2 VARCHAR(100), param_name3 VARCHAR(100), param_name4 VARCHAR(100), param_name5 VARCHAR(100), param_name6 VARCHAR(100)"
+			", param_name7 VARCHAR(100), param_name8 VARCHAR(100), param_name9 VARCHAR(100), param_name10 VARCHAR(100)) ENGINE=MyISAM"))
 		{
 			return false;
 		}
 
-		if (!db->Query("INSERT INTO filter_types VALUES (1, 'raw value', 'not using some filtering')"))
+		if (!db->Query("INSERT INTO filters (id, name, note, param_count) VALUES (1, 'raw value', 'not using any filtering', 0)"))
 		{
 			return false;
 		}
 
 
 
-		if (!db->Query("CREATE TABLE history (id int PRIMARY KEY, tag_id int NOT NULL, seconds_period int NOT NULL, create_date DATETIME, filter_type int not null, filter_params VARCHAR(10000), INDEX idx_history__tag_id(tag_id)) ENGINE=MyISAM"))
+		if (!db->Query("CREATE TABLE history (id int PRIMARY KEY, tag_id int NOT NULL, seconds_period int NOT NULL, create_date DATETIME, "
+			"filter_id int not null, filter_param1 VARCHAR(100), filter_param2 VARCHAR(100), filter_param3 VARCHAR(100), filter_param4 VARCHAR(100), "
+			"filter_param5 VARCHAR(100), filter_param6 VARCHAR(100), filter_param7 VARCHAR(100), filter_param8 VARCHAR(100), filter_param9 VARCHAR(100), filter_param10 VARCHAR(100), "
+			"INDEX idx_history__tag_id(tag_id)) ENGINE=MyISAM"))
 		{
 			return false;
 		}
@@ -115,7 +120,7 @@ public:
 		db->Query("DROP TABLE history_integers");
 		db->Query("DROP TABLE history_floats");
 		db->Query("DROP TABLE history");
-		db->Query("DROP TABLE filter_types");
+		db->Query("DROP TABLE filters");
 		db->Query("DROP TABLE tags");
 		db->Query("DROP TABLE sensors");
 		db->Query("DROP TABLE value_types");
