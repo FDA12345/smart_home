@@ -158,22 +158,8 @@ public:
 			return nullptr;
 		}
 
-		/*
-		std::string escapedQuery;
-		if (!EscapeString(sql, escapedQuery))
-		{
-			return nullptr;
-		}
-
-		if (mysql_real_query(m_mysql->Handle(), escapedQuery.c_str(), escapedQuery.length()) != 0)
-		{
-			return nullptr;
-		}
-		*/
-
 		if (mysql_real_query(m_mysql->Handle(), sql.c_str(), sql.length()) != 0)
 		{
-			std::string errMsg = LastError();
 			return nullptr;
 		}
 
