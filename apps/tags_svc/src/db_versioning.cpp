@@ -130,7 +130,7 @@ private:
 			return false;
 		}
 
-		bool ok = m_db->Query("INSERT INTO versions (id, when_, note) VALUES (" +  std::to_string(version->Version()) + ", NOW(), '" + note + "')").get();
+		bool ok = m_db->Query("INSERT INTO versions (id, create_date, note) VALUES (" +  std::to_string(version->Version()) + ", NOW(), '" + note + "')").get();
 		if (!ok)
 		{
 			const auto errMsg = m_db->LastError();
