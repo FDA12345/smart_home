@@ -39,6 +39,8 @@ namespace db
 
 			virtual bool Downgrade() = 0;//downgrade to previous version
 			virtual bool Downgrade(uint64_t version) = 0;
+
+			virtual bool NeedUpgrade() const = 0;
 		};
 
 		using Ptr = std::unique_ptr<DbVersioning>;

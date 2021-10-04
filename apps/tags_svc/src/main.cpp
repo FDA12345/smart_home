@@ -15,8 +15,17 @@ int main()
 	params.password = "";
 
 	auto tagsDb = db::tags::Create(db::mysql::Create(params), db::versioning::Create(db::mysql::Create(params)), {});
-	if (!tagsDb->Upgrade())
+
+	if (tagsDb->NeedUpgrade())
 	{
-		return -1;
+		logINFO(__FUNCTION__, "Upgrading database ...");
+
+		if (!tagsDb->Upgrade())
+		{
+			logERROR(__FUNCTION__, "Upgrading database failed");
+			return -1;
+		}
+
+		logINFO(__FUNCTION__, "Upgrading database done");
 	}
 }

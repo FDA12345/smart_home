@@ -47,6 +47,11 @@ public:
 		return m_verDb->Downgrade(version);
 	}
 
+	bool NeedUpgrade() const override
+	{
+		return m_verDb->NeedUpgrade();
+	}
+
 private:
 	db::Ptr m_db;
 	db::versioning::Ptr m_verDb;

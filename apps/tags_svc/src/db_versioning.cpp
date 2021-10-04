@@ -79,6 +79,27 @@ public:
 		return false;
 	}
 
+	bool NeedUpgrade() const override
+	{
+		if (m_versions.empty())
+		{
+			return false;
+		}
+
+		auto it = m_versions.find(m_version);
+		if (it == std::end(m_versions))
+		{
+			return true;
+		}
+
+		if (*it != *m_versions.rbegin())
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 private:
 	using VersionsMap = std::map<uint64_t, DbVersion::Ptr>;
 
