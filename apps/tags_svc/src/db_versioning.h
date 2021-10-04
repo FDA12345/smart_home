@@ -42,6 +42,6 @@ namespace db
 		};
 
 		using Ptr = std::unique_ptr<DbVersioning>;
-		Ptr Create(const db::Ptr& db);
+		Ptr Create(db::Ptr&& db);
 	}
 }

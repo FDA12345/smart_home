@@ -9,8 +9,8 @@ namespace tags
 class TagsDbImpl : public TagsDb
 {
 public:
-	TagsDbImpl(const db::Ptr& db, db::versioning::Ptr&& verDb, const Params& params)
-		: m_db(db)
+	TagsDbImpl(db::Ptr&& db, db::versioning::Ptr&& verDb, const Params& params)
+		: m_db(std::move(db))
 		, m_verDb(std::move(m_verDb))
 	{
 		#include "tags_db_ver_1.h"
@@ -52,9 +52,9 @@ private:
 	db::versioning::Ptr m_verDb;
 };
 
-Ptr Create(const db::Ptr& db, db::versioning::Ptr&& verDb, const Params& params)
+Ptr Create(db::Ptr&& db, db::versioning::Ptr&& verDb, const Params& params)
 {
-	return std::make_unique<TagsDbImpl>(db, std::move(verDb), params);
+	return std::make_unique<TagsDbImpl>(std::move(db), std::move(verDb), params);
 }
 
 }//tags

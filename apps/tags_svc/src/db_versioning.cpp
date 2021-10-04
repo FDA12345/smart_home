@@ -11,8 +11,8 @@ namespace versioning
 class DbVersioningImpl : public DbVersioning
 {
 public:
-	DbVersioningImpl(const db::Ptr& db)
-		: m_db(db)
+	DbVersioningImpl(db::Ptr&& db)
+		: m_db(std::move(db))
 	{
 		LoadVersion();
 	}
@@ -139,9 +139,9 @@ private:
 	VersionsMap m_versions;
 };
 
-Ptr Create(const db::Ptr& db)
+Ptr Create(db::Ptr&& db)
 {
-	return std::make_unique<DbVersioningImpl>(db);
+	return std::make_unique<DbVersioningImpl>(std::move(db));
 }
 
 }

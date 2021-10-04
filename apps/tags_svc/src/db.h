@@ -42,6 +42,6 @@ public:
 	virtual bool RollbackTransaction() = 0;
 };
 
-using Ptr = std::shared_ptr<Db>;
+using Ptr = std::unique_ptr<Db>;
 
 };

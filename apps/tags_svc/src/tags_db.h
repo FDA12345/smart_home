@@ -19,6 +19,6 @@ namespace db
 
 		using Ptr = std::unique_ptr<TagsDb>;
 
-		Ptr Create(const db::Ptr& db, db::versioning::Ptr&& verDb, const Params& params);
+		Ptr Create(db::Ptr&& db, db::versioning::Ptr&& verDb, const Params& params);
 	}
 };

@@ -14,10 +14,7 @@ int main()
 	params.user = "root";
 	params.password = "";
 
-	auto db = db::mysql::Create(params);
-	auto verDb = db::versioning::Create(db);
-
-	auto tagsDb = db::tags::Create(std::move(db), std::move(verDb), {});
+	auto tagsDb = db::tags::Create(db::mysql::Create(params), db::versioning::Create(db::mysql::Create(params)), {});
 	if (!tagsDb->Upgrade())
 	{
 		return -1;
