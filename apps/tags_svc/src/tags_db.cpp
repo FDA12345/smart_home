@@ -11,7 +11,7 @@ class TagsDbImpl : public TagsDb
 public:
 	TagsDbImpl(db::Ptr&& db, db::versioning::Ptr&& verDb, const Params& params)
 		: m_db(std::move(db))
-		, m_verDb(std::move(m_verDb))
+		, m_verDb(std::move(verDb))
 	{
 		#include "tags_db_ver_1.h"
 	}

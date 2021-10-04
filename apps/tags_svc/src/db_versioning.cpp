@@ -39,7 +39,9 @@ public:
 		//perform clean install
 		if (m_version == 0)
 		{
-			return UpgradeFrom(std::begin(m_versions));
+			bool ok = m_db->Open() && UpgradeFrom(std::begin(m_versions));
+			m_db->Close();
+			return ok;
 		}
 		else
 		{
@@ -52,7 +54,9 @@ public:
 			++it;
 			if (it != std::end(m_versions))
 			{
-				return UpgradeFrom(it);
+				bool ok = m_db->Open() && UpgradeFrom(it);
+				m_db->Close();
+				return ok;
 			}
 
 			//upgrade not needed
@@ -82,17 +86,22 @@ private:
 	{
 		for (auto curIt = it; curIt != std::end(m_versions); ++curIt)
 		{
-			m_db->BeginTransaction();
+			//m_db->BeginTransaction();
 
 			const auto& version = curIt->second;
 
 			if (!UpgradeToVersion(version))
 			{
-				m_db->RollbackTransaction();
+				if (version->CanDowngrade(m_db))
+				{
+					version->Downgrade(m_db);
+				}
+
+				//m_db->RollbackTransaction();
 				return false;
 			}
 
-			m_db->CommitTransaction();
+			//m_db->CommitTransaction();
 		}
 
 		return true;
@@ -115,8 +124,19 @@ private:
 
 	bool UpgradeVersionsTable(const DbVersion::Ptr& version)
 	{
-		m_db->Query("INSERT INTO versions (id, when_, note) VALUES ("")");
-		return false;
+		std::string note;
+		if (!m_db->EscapeString(version->Description(), note))
+		{
+			return false;
+		}
+
+		bool ok = m_db->Query("INSERT INTO versions (id, when_, note) VALUES (" +  std::to_string(version->Version()) + ", NOW(), '" + note + "')").get();
+		if (!ok)
+		{
+			const auto errMsg = m_db->LastError();
+		}
+
+		return ok;
 	}
 
 	void LoadVersion()
@@ -124,7 +144,7 @@ private:
 		if (m_db->Open())
 		{
 			const auto recs = m_db->Query("SELECT MAX(id) FROM versions");
-			if (recs && !recs->Empty())
+			if (recs && !recs->Empty() && recs->Next())
 			{
 				m_version = std::atoll(recs->ValueAsString(0).c_str());
 			}

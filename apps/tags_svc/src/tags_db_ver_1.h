@@ -8,13 +8,20 @@ public:
 
 	bool Upgrade(const db::Ptr& db) override
 	{
-		if (!db->Query("CREATE TABLE versions ON (id int, when_ DATETIME, note VARCHAR(255))"))
+		if (!db->Query("CREATE TABLE versions (id int PRIMARY KEY, when_ DATETIME, note VARCHAR(255))"))
 		{
 			return false;
 		}
 
-		return false;
+		return true;
+	}
+
+	bool CanDowngrade(const db::Ptr& db) const override { return true; }
+	bool Downgrade(const db::Ptr& db) override
+	{
+		db->Query("DROP TABLE versions");
+		return true;
 	}
 };
 
-m_verDb->AddVersion(std::unique_ptr<Ver1>());
+m_verDb->AddVersion(std::make_unique<Ver1>());
