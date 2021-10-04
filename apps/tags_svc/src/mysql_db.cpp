@@ -148,8 +148,8 @@ public:
 			return nullptr;
 		}
 
-		const auto[ok, escapedQuery] = EscapeQuery(sql);
-		if (!ok)
+		std::string escapedQuery;
+		if (!EscapeString(sql, escapedQuery))
 		{
 			return nullptr;
 		}
@@ -192,18 +192,18 @@ public:
 		return Query("ROLLBACK").get();
 	}
 
-private:
-	std::tuple<bool, std::string> EscapeQuery(const std::string& sql)
+	bool EscapeString(const std::string& str, std::string& escapedStr) override
 	{
-		std::vector<char> buffer(sql.length() * 2 + 1);//https://dev.mysql.com/doc/c-api/8.0/en/mysql-real-escape-string.html
-		auto result = mysql_real_escape_string(m_mysql->Handle(), &buffer[0], sql.c_str(), sql.length());
+		std::vector<char> buffer(str.length() * 2 + 1);//https://dev.mysql.com/doc/c-api/8.0/en/mysql-real-escape-string.html
+		auto result = mysql_real_escape_string(m_mysql->Handle(), &buffer[0], str.c_str(), str.length());
 
 		if (result == -1)
 		{
-			return std::make_tuple(false, "");
+			return false;
 		}
 
-		return std::make_tuple(true, std::string(&buffer[0], result));
+		escapedStr.assign(&buffer[0], result);
+		return true;
 	}
 
 private:

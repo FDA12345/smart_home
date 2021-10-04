@@ -8,6 +8,11 @@ public:
 
 	bool Upgrade(const db::Ptr& db) override
 	{
+		if (!db->Query("CREATE TABLE versions ON (id int, when_ DATETIME, note VARCHAR(255))"))
+		{
+			return false;
+		}
+
 		return false;
 	}
 };

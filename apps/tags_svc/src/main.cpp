@@ -10,7 +10,7 @@ int main()
 
 	db::mysql::Params params;
 	params.host = "192.168.41.11";
-	params.db = "db_terminal";
+	params.db = "smarthome_tags";
 	params.user = "root";
 	params.password = "";
 

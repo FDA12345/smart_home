@@ -40,6 +40,8 @@ public:
 	virtual bool BeginTransaction() = 0;
 	virtual bool CommitTransaction() = 0;
 	virtual bool RollbackTransaction() = 0;
+
+	virtual bool EscapeString(const std::string& str, std::string& escapedStr) = 0;
 };
 
 using Ptr = std::unique_ptr<Db>;

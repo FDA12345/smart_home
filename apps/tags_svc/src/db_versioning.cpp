@@ -115,6 +115,7 @@ private:
 
 	bool UpgradeVersionsTable(const DbVersion::Ptr& version)
 	{
+		m_db->Query("INSERT INTO versions (id, when_, note) VALUES ("")");
 		return false;
 	}
 
