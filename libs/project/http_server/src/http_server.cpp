@@ -157,7 +157,10 @@ private:
 	{
 		std::lock_guard lock(mx);
 
-		auto it = routes.find(req.Route());
+		const auto queryPos = req.Route().find('?');
+		const auto resource = (queryPos == std::string::npos) ? req.Route() : req.Route().substr(0, queryPos);
+
+		auto it = routes.find(resource);
 		if (it == routes.end())
 		{
 			rsp.Result(ResultCodes::CODE_NOT_FOUND);

@@ -85,7 +85,7 @@ public:
 			}
 			m_clientPtr.reset(&m_client);
 
-			if (MQTTClient_setCallbacks(m_client, this, __onConnLost, __onMessageArrived, __onDeliveryComplete) != MQTTCLIENT_SUCCESS)
+			if (MQTTClient_setCallbacks(m_client, this, staticOnConnLost, staticOnMessageArrived, staticOnDeliveryComplete) != MQTTCLIENT_SUCCESS)
 			{
 				break;
 			}
@@ -300,22 +300,22 @@ private:
 		{
 			std::lock_guard lock(m_mx);
 
-			for (const auto& s : m_subscribes)
+			for (const auto& sub : m_subscribes)
 			{
-				subs.push_back(s);
+				subs.push_back(sub);
 			}
 
 			m_subscribes.clear();
 		}
 
-		for (const auto& s : subs)
+		for (const auto& sub : subs)
 		{
 			if (!MQTTClient_isConnected(m_client))
 			{
 				break;
 			}
 
-			if (MQTTClient_subscribe(m_client, s.c_str(), 0) != MQTTCLIENT_SUCCESS)
+			if (MQTTClient_subscribe(m_client, sub.c_str(), 0) != MQTTCLIENT_SUCCESS)
 			{
 				break;
 			}
@@ -329,22 +329,22 @@ private:
 		{
 			std::lock_guard lock(m_mx);
 
-			for (const auto& s : m_unsubscribes)
+			for (const auto& sub : m_unsubscribes)
 			{
-				unsubs.push_back(s);
+				unsubs.push_back(sub);
 			}
 
 			m_unsubscribes.clear();
 		}
 
-		for (const auto& s : unsubs)
+		for (const auto& sub : unsubs)
 		{
 			if (!MQTTClient_isConnected(m_client))
 			{
 				break;
 			}
 
-			if (MQTTClient_unsubscribe(m_client, s.c_str()) != MQTTCLIENT_SUCCESS)
+			if (MQTTClient_unsubscribe(m_client, sub.c_str()) != MQTTCLIENT_SUCCESS)
 			{
 				break;
 			}
@@ -470,7 +470,7 @@ private:
 		}
 	}
 
-	static void __onConnLost(void* context, char* cause)
+	static void staticOnConnLost(void* context, char* cause)
 	{
 		static_cast<MqttBrokerImpl*>(context)->OnConnLost(cause);
 	}
@@ -482,7 +482,7 @@ private:
 		m_cv.notify_one();
 	}
 
-	static int __onMessageArrived(void* context, char* topicName, int topicLen, MQTTClient_message* message)
+	static int staticOnMessageArrived(void* context, char* topicName, int topicLen, MQTTClient_message* message)
 	{
 		static_cast<MqttBrokerImpl*>(context)->OnMessageArrived({ topicName, topicLen, message });
 		return 1;
@@ -505,7 +505,7 @@ private:
 		}
 	}
 
-	static void __onDeliveryComplete(void* context, MQTTClient_deliveryToken dt)
+	static void staticOnDeliveryComplete(void* context, MQTTClient_deliveryToken dt)
 	{
 		static_cast<MqttBrokerImpl*>(context)->OnDeliveryComplete(dt);
 	}

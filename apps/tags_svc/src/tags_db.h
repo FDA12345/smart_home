@@ -10,7 +10,9 @@ namespace db
 		{
 		};
 
-		class TagsDb : public db::versioning::DbVersioning
+		class TagsDb :
+			public db::Db,
+			public db::versioning::DbVersioning
 		{
 		public:
 			virtual ~TagsDb() = default;
